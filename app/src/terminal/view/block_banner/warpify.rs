@@ -46,7 +46,7 @@ impl WarpifyBannerState {
     }
 
     pub fn title(&self) -> &str {
-        "Warpify subshell"
+        "LocalShellify subshell"
     }
 
     pub fn action(&self) -> TerminalAction {

@@ -190,7 +190,7 @@ impl KeyEquivalent {
 fn app_name() -> String {
     NSRunningApplication::currentApplication()
         .localizedName()
-        .map_or_else(|| "Warp".to_owned(), |name| name.to_string())
+        .map_or_else(|| "LocalShell".to_owned(), |name| name.to_string())
 }
 
 // Get properties from a standard action.

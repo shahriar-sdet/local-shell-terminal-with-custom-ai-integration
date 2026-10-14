@@ -99,7 +99,7 @@ impl AwsCredentialsState {
             ),
             Self::Refreshing => (
                 "Refreshing credentials...".to_string(),
-                "Loading your AWS CLI credentials into Warp".to_string(),
+                "Loading your AWS CLI credentials into LocalShell".to_string(),
                 Icon::RefreshCw04,
             ),
             Self::Loaded {

@@ -1172,6 +1172,7 @@ pub const LOCALSHELL_DISABLED_FLAGS: &[FeatureFlag] = &[
     FeatureFlag::FactoryMcp,
     FeatureFlag::PreviewUrlsMcp,
     // Cloud agents, environments and handoff.
+    FeatureFlag::AgentManagementView,
     FeatureFlag::AmbientAgentsCommandLine,
     FeatureFlag::AmbientAgentsRTC,
     FeatureFlag::AmbientAgentsImageUpload,
@@ -1318,10 +1319,10 @@ impl FeatureFlag {
                 Some("Enables rendering markdown images inline in AI block list responses.")
             }
             CloudEnvironments => {
-                Some("Enables creating and managing Warp Environments via the CLI.")
+                Some("Enables creating and managing LocalShell Environments via the CLI.")
             }
             CreateEnvironmentSlashCommand => Some(
-                "Enables the /create environment slash command for setting up Warp Environments with custom configurations.",
+                "Enables the /create environment slash command for setting up LocalShell Environments with custom configurations.",
             ),
             GlobalSearch => Some("Enables global search in the left panel"),
             BlocklistMarkdownTableRendering => {
@@ -1331,7 +1332,7 @@ impl FeatureFlag {
                 Some("Enables rendering and interaction support for markdown tables in notebooks.")
             }
             SettingsFile => Some(
-                "Enables configuring Warp via a user-editable `settings.toml` file, with hot reload and error reporting for invalid values.",
+                "Enables configuring LocalShell via a user-editable `settings.toml` file, with hot reload and error reporting for invalid values.",
             ),
             GitOperationsInCodeReview => Some(
                 "Enables commit, push, and create-PR actions directly from the code review panel.",

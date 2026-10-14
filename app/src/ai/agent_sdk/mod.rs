@@ -2327,7 +2327,7 @@ fn authenticate_and_dispatch(
 /// within a Warp terminal session).
 pub fn is_running_in_warp() -> bool {
     std::env::var("TERM_PROGRAM")
-        .map(|v| v == "WarpTerminal")
+        .map(|v| v == "LocalShell")
         .unwrap_or(false)
 }
 
@@ -2345,7 +2345,7 @@ fn report_fatal_error(err: anyhow::Error, ctx: &mut AppContext) {
         if let Ok(path) = log_file_path() {
             let _ = write!(
                 message,
-                "\n\nFor more information, check Warp logs at {}",
+                "\n\nFor more information, check LocalShell logs at {}",
                 path.display()
             );
         }

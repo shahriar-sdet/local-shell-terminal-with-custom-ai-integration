@@ -75,9 +75,9 @@ impl SshRemoteServerChoiceView {
         let buttons = ctx.add_typed_action_view(|_| {
             KeyboardNavigableButtons::new(vec![
                 rich_navigation_button(
-                    "Install Warp's SSH extension".to_string(),
+                    "Install LocalShell's SSH extension".to_string(),
                     Some(
-                        "Install Warp's extension to enable agent features like file browsing, \
+                        "Install LocalShell's extension to enable agent features like file browsing, \
                          code review, and intelligent command completions in this session."
                             .to_string(),
                     ),
@@ -88,7 +88,7 @@ impl SshRemoteServerChoiceView {
                 rich_navigation_button(
                     "Continue without installing".to_string(),
                     Some(
-                        "You'll still get a Warpified experience just without the coding \
+                        "You'll still get a LocalShellified experience just without the coding \
                          features."
                             .to_string(),
                     ),
@@ -176,7 +176,7 @@ impl SshRemoteServerChoiceView {
         let manage_settings_link = appearance
             .ui_builder()
             .link(
-                "Manage Warpify settings".into(),
+                "Manage LocalShellify settings".into(),
                 None,
                 Some(Box::new(|ctx| {
                     ctx.dispatch_typed_action(SshRemoteServerChoiceViewAction::OpenWarpifySettings);

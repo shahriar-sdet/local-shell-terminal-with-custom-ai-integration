@@ -12,4 +12,4 @@ cargo install --git https://github.com/wgsl-analyzer/wgsl-analyzer --tag "2025-0
 "$PWD"/script/install_cargo_binstall
 
 # Install nextest, which we use as our test execution harness.
-cargo binstall --secure --no-confirm --no-discover-github-token cargo-nextest
+cargo binstall --secure --locked --no-confirm --no-discover-github-token cargo-nextest

@@ -882,7 +882,7 @@ impl PlatformPageWidget {
                     .with_child(
                         Container::new(
                             Text::new(
-                                "Create a key to manage external access to Warp",
+                                "Create a key to manage external access to LocalShell",
                                 appearance.ui_font_family(),
                                 CONTENT_FONT_SIZE,
                             )

@@ -286,8 +286,8 @@ impl VersionLease {
             .map(|layout| {
                 Self::acquire(&layout)
                     .context(
-                        "failed to protect this managed Warp Agent CLI version; retry the \
-                         command, or reinstall Warp Agent CLI if the problem persists",
+                        "failed to protect this managed LocalShell Agent CLI version; retry the \
+                         command, or reinstall LocalShell Agent CLI if the problem persists",
                     )
                     .map(Some)
             })
@@ -307,8 +307,8 @@ impl VersionLease {
 
         if !is_complete_version_dir(layout, &layout.running_version_dir) {
             bail!(
-                "the managed Warp Agent CLI version at {:?} was retired while this process was \
-                 starting; retry the command, or reinstall Warp Agent CLI if the problem persists",
+                "the managed LocalShell Agent CLI version at {:?} was retired while this process was \
+                 starting; retry the command, or reinstall LocalShell Agent CLI if the problem persists",
                 layout.running_version_dir
             );
         }
@@ -673,7 +673,7 @@ async fn check_for_update(layout: InstallLayout) -> Result<CheckDecision> {
         VersionDirState::Invalid => {
             bail!(
                 "refusing to replace incomplete or invalid installed TUI version at \
-                 {version_dir:?}; remove that directory or reinstall Warp Agent CLI, then retry"
+                 {version_dir:?}; remove that directory or reinstall LocalShell Agent CLI, then retry"
             );
         }
         VersionDirState::Complete | VersionDirState::Missing => {}
@@ -759,7 +759,7 @@ async fn install_update(layout: InstallLayout, latest_version: String) -> Result
         VersionDirState::Invalid => {
             bail!(
                 "refusing to replace incomplete or invalid installed TUI version at \
-                 {version_dir:?}; remove that directory or reinstall Warp Agent CLI, then retry"
+                 {version_dir:?}; remove that directory or reinstall LocalShell Agent CLI, then retry"
             );
         }
     };
@@ -780,7 +780,7 @@ async fn install_update(layout: InstallLayout, latest_version: String) -> Result
             VersionDirState::Invalid => {
                 bail!(
                     "refusing to replace incomplete or invalid installed TUI version at \
-                     {version_dir:?}; remove that directory or reinstall Warp Agent CLI, then retry"
+                     {version_dir:?}; remove that directory or reinstall LocalShell Agent CLI, then retry"
                 );
             }
         }
@@ -832,10 +832,10 @@ async fn install_update(layout: InstallLayout, latest_version: String) -> Result
         ])
         .output()
         .await
-        .context("failed to launch the Warp Agent CLI installer")?;
+        .context("failed to launch the LocalShell Agent CLI installer")?;
     if !output.status.success() {
         bail!(
-            "Warp Agent CLI installer exited with {}: {}",
+            "LocalShell Agent CLI installer exited with {}: {}",
             output.status,
             String::from_utf8_lossy(&output.stderr).trim()
         );
@@ -844,10 +844,10 @@ async fn install_update(layout: InstallLayout, latest_version: String) -> Result
     blocking::unblock(move || {
         let version_dir = layout.versions_dir.join(&latest_version);
         if version_dir_state(&layout, &version_dir)? != VersionDirState::Complete {
-            bail!("Warp Agent CLI installer did not create a complete version at {version_dir:?}");
+            bail!("LocalShell Agent CLI installer did not create a complete version at {version_dir:?}");
         }
         if !current_points_at(&layout, &latest_version) {
-            bail!("Warp Agent CLI installer did not activate expected version {latest_version:?}");
+            bail!("LocalShell Agent CLI installer did not activate expected version {latest_version:?}");
         }
         prune_old_versions(&layout, &latest_version);
         Ok(UpdateOutcome::Installed {
@@ -1047,16 +1047,16 @@ async fn download_windows_installer(
         }
     }
     let (path, mut file) =
-        installer.context("failed to allocate a unique Warp Agent CLI installer path")?;
+        installer.context("failed to allocate a unique LocalShell Agent CLI installer path")?;
     let installer = DownloadedInstaller { path };
     let response = client
         .get(download_url(version)?.as_str())
         .timeout(DOWNLOAD_TIMEOUT)
         .send()
         .await
-        .context("failed to download the Warp Agent CLI installer")?
+        .context("failed to download the LocalShell Agent CLI installer")?
         .error_for_status()
-        .context("failed to download the Warp Agent CLI installer")?;
+        .context("failed to download the LocalShell Agent CLI installer")?;
     futures_lite::io::copy(
         response
             .bytes_stream()
@@ -1065,7 +1065,7 @@ async fn download_windows_installer(
         &mut file,
     )
     .await
-    .context("failed to download the Warp Agent CLI installer")?;
+    .context("failed to download the LocalShell Agent CLI installer")?;
     file.sync_data().await?;
     drop(file);
     Ok(installer)

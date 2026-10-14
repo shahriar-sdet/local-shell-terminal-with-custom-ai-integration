@@ -100,7 +100,7 @@ where
     if let Some((peer, request_id)) = cancellation {
         let cancel = peer.notify_cancelled(CancelledNotificationParam::new(
             Some(request_id),
-            Some("Warp MCP tool call deadline exceeded".to_owned()),
+            Some("LocalShell MCP tool call deadline exceeded".to_owned()),
         ));
         let cancellation_outcome =
             match select(Box::pin(cancel), Box::pin(cancellation_deadline())).await {

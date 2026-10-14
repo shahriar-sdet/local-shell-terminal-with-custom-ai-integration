@@ -103,6 +103,12 @@ impl ContextFlag {
         disable_flag(Self::ShowMCPServers);
     }
 
+    /// LocalShell drops Warp's resource center, whose pages are Warp onboarding, changelog and
+    /// marketing content.
+    pub fn set_local_shell() {
+        disable_flag(Self::WarpEssentials);
+    }
+
     // ContextFlag flag sets:
     pub fn set_shared_session_only() {
         disable_flag(Self::CreateSharedSession);

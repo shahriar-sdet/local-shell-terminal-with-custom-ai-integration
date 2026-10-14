@@ -62,7 +62,7 @@ impl OfferVariant {
     pub(crate) fn primary_label(self) -> &'static str {
         match self {
             OfferVariant::HeadStart => "Unlock the full AI experience",
-            OfferVariant::ChooseHowToStart => "Use Warp with AI",
+            OfferVariant::ChooseHowToStart => "Use LocalShell with AI",
         }
     }
 
@@ -351,7 +351,7 @@ impl OfferSlide {
         let get_warping = self.get_warping_button.render(
             appearance,
             button::Params {
-                content: button::Content::Label("Get Warping".into()),
+                content: button::Content::Label("Get started".into()),
                 theme: &button::themes::Primary,
                 options: button::Options {
                     keystroke: Some(enter),

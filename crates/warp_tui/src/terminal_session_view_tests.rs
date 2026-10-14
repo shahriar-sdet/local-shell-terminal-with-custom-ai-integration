@@ -3394,7 +3394,7 @@ fn zero_state_position_stays_stable_across_shell_bootstrap() {
         let title_row = |lines: &[String]| {
             lines
                 .iter()
-                .position(|line| line.contains("Warp Agent CLI"))
+                .position(|line| line.contains("LocalShell Agent CLI"))
                 .unwrap_or_else(|| panic!("zero-state title should render:\n{}", lines.join("\n")))
         };
         assert_eq!(
@@ -3694,7 +3694,9 @@ fn zero_state_running_command_hint_shows_attachment() {
 
         let lines = render_session(&mut app, &view, 80, 40);
         assert!(
-            lines.iter().any(|line| line.contains("Warp Agent CLI")),
+            lines
+                .iter()
+                .any(|line| line.contains("LocalShell Agent CLI")),
             "zero state should remain visible:\n{}",
             lines.join("\n")
         );
@@ -4256,8 +4258,8 @@ fn zero_state_renders_with_only_zero_height_bootstrap_blocks() {
         let lines = frame.buffer.to_lines();
         let title_row = lines
             .iter()
-            .position(|line| line.contains("Warp Agent CLI"))
-            .expect("zero state should render the Warp Agent CLI title");
+            .position(|line| line.contains("LocalShell Agent CLI"))
+            .expect("zero state should render the LocalShell Agent CLI title");
         assert!(
             title_row < 28,
             "zero-state title should render in the transcript area:\n{}",
@@ -4308,11 +4310,15 @@ fn first_zero_state_stays_hidden_while_markers_load_and_reconciles_without_repla
             );
         });
         let lines = render_session(&mut app, &view, 100, 24);
-        assert!(lines.iter().any(|line| line.contains("Warp Agent CLI")));
         assert!(
             lines
                 .iter()
-                .all(|line| !line.contains("What’s different about Warp"))
+                .any(|line| line.contains("LocalShell Agent CLI"))
+        );
+        assert!(
+            lines
+                .iter()
+                .all(|line| !line.contains("What’s different about LocalShell"))
         );
         assert!(lines.iter().all(|line| !line.contains("████")));
 
@@ -4428,11 +4434,15 @@ fn background_session_does_not_receive_first_run_onboarding() {
             );
         });
         let lines = render_session(&mut app, &onboarding_view, 100, 24);
-        assert!(lines.iter().any(|line| line.contains("Welcome to Warp")));
         assert!(
             lines
                 .iter()
-                .any(|line| line.contains("What’s different about Warp"))
+                .any(|line| line.contains("Welcome to LocalShell"))
+        );
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.contains("What’s different about LocalShell"))
         );
     });
 }

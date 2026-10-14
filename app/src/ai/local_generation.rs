@@ -1,7 +1,6 @@
 //! Single-shot AI generations (command search, explanations, workflow metadata, suggestions)
 //! answered by the user's own model.
 
-use crate::ai_assistant::execution_context::WarpAiExecutionContext;
 use local_ai::{ChatMessage, LocalAiError, TaskKind};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
@@ -16,6 +15,7 @@ use crate::ai::predict::generate_am_query_suggestions::{
     Suggestion as AgentQuerySuggestion,
 };
 use crate::ai::predict::predict_am_queries::{PredictAMQueriesRequest, PredictAMQueriesResponse};
+use crate::ai_assistant::execution_context::WarpAiExecutionContext;
 
 /// Sends one prompt for `task` and returns the model's answer text.
 pub(crate) async fn complete(

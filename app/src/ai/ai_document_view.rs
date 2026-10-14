@@ -1010,7 +1010,7 @@ impl AIDocumentView {
             model.sync_to_warp_drive(self.document_id, ctx)
         });
         if !success {
-            report_error!("Failed to create Warp Drive notebook");
+            report_error!("Failed to create LocalShell Drive notebook");
         }
     }
 
@@ -1334,7 +1334,7 @@ impl BackingView for AIDocumentView {
                     .into_item(),
             );
             menu_items.push(
-                MenuItemFields::new("Show in Warp Drive")
+                MenuItemFields::new("Show in LocalShell Drive")
                     .with_on_select_action(AIDocumentAction::ShowInWarpDrive)
                     .with_icon(Icon::WarpDrive)
                     .into_item(),

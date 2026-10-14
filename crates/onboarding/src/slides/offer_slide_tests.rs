@@ -98,7 +98,7 @@ fn choose_how_to_start_copy_and_telemetry_names_match_spec() {
         variant.subtitle(),
         Some("To use AI, start with a plan or one-time credit packs.")
     );
-    assert_eq!(variant.primary_label(), "Use Warp with AI");
+    assert_eq!(variant.primary_label(), "Use LocalShell with AI");
     assert_eq!(
         variant.primary_description(),
         "Warp Agent works locally or in the cloud with frontier and OSS models. Proactively fix terminal errors, implement changes, and ship verified code."

@@ -54,6 +54,11 @@ WORKSPACE_ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # `.cargo/config.toml`.
 export MACOSX_DEPLOYMENT_TARGET="10.14"
 
+# Pin the SDK to the selected Xcode's. When Xcode is older than the running macOS, `cc` falls back
+# to the Command Line Tools SDK for that newer macOS, whose .tbd stubs Xcode's linker can't read
+# ("ld: tapi error: malformed file").
+export SDKROOT="${SDKROOT:-$(xcrun --sdk macosx --show-sdk-path)}"
+
 # Constants used later in the script.
 INTEL_ARCH="x86_64"
 INTEL_TARGET="$INTEL_ARCH-apple-darwin"

@@ -393,7 +393,9 @@ pub async fn make_authenticated_client(
         // Try dynamic client registration.
         let mut oauth_state = OAuthState::Unauthorized(auth_manager);
         oauth_state
-            .start_authorization(AuthorizationRequest::new(&redirect_uri).with_client_name("Warp"))
+            .start_authorization(
+                AuthorizationRequest::new(&redirect_uri).with_client_name("LocalShell"),
+            )
             .await?;
         oauth_state
     };

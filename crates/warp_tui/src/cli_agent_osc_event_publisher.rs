@@ -79,14 +79,14 @@ impl CliAgentOscEventPublisher {
 
     pub(crate) fn publish_session_start(&self, ctx: &AppContext) {
         let mut notification = self.notification("session_start", ctx);
-        notification.summary = Some("Warp Agent session started.".to_owned());
+        notification.summary = Some("LocalShell Agent session started.".to_owned());
         self.publish(notification);
     }
 
     pub(crate) fn publish_prompt_submit(&self, prompt: String, ctx: &AppContext) {
         let mut notification = self.notification("prompt_submit", ctx);
         notification.query = notification_excerpt(&prompt);
-        notification.summary = Some("Warp Agent is working on your request.".to_owned());
+        notification.summary = Some("LocalShell Agent is working on your request.".to_owned());
         self.publish(notification);
     }
 
@@ -194,13 +194,13 @@ impl CliAgentOscEventPublisher {
         notification.error_type = status_event.error_type.map(str::to_owned);
         notification.summary = Some(
             match new_status {
-                ConversationStatus::Success => "Warp Agent completed your request.",
-                ConversationStatus::Error => "Warp Agent encountered an error.",
-                ConversationStatus::Cancelled => "Warp Agent was cancelled.",
-                ConversationStatus::InProgress => "Warp Agent is working on your request.",
-                ConversationStatus::Blocked { .. } => "Warp Agent is waiting for your input.",
-                ConversationStatus::TransientError => "Warp Agent is reconnecting.",
-                ConversationStatus::WaitingForEvents => "Warp Agent is waiting for events.",
+                ConversationStatus::Success => "LocalShell Agent completed your request.",
+                ConversationStatus::Error => "LocalShell Agent encountered an error.",
+                ConversationStatus::Cancelled => "LocalShell Agent was cancelled.",
+                ConversationStatus::InProgress => "LocalShell Agent is working on your request.",
+                ConversationStatus::Blocked { .. } => "LocalShell Agent is waiting for your input.",
+                ConversationStatus::TransientError => "LocalShell Agent is reconnecting.",
+                ConversationStatus::WaitingForEvents => "LocalShell Agent is waiting for events.",
             }
             .to_owned(),
         );

@@ -1102,14 +1102,16 @@ where
             // Received a Warp OSC used for in-band generators.
             WARP_IN_BAND_GENERATOR_OSC_MARKER => match params.get(1) {
                 Some(&WARP_IN_BAND_GENERATOR_START_BYTE) => {
-                    log::info!("Received a Warp OSC marker for starting in-band command output.");
+                    log::info!(
+                        "Received a LocalShell OSC marker for starting in-band command output."
+                    );
                     self.handler.start_in_band_command_output();
                 }
                 Some(&WARP_IN_BAND_GENERATOR_END_BYTE) => {
                     self.handler.end_in_band_command_output(true);
                 }
                 _ => {
-                    log::warn!("Received a Warp OSC marker missing required param.");
+                    log::warn!("Received a LocalShell OSC marker missing required param.");
                 }
             },
 
@@ -1131,12 +1133,12 @@ where
                             .get(2)
                             .map(|osc_data| String::from_utf8_lossy(osc_data))
                         else {
-                            log::warn!("Warp OSC marker did not contain payload");
+                            log::warn!("LocalShell OSC marker did not contain payload");
                             return;
                         };
                         safe_debug!(
-                            safe: ("Received Warp OSC string for shell hook"),
-                            full: ("Received Warp OSC string for shell hook with JSON payload: {:?}", data_str)
+                            safe: ("Received LocalShell OSC string for shell hook"),
+                            full: ("Received LocalShell OSC string for shell hook with JSON payload: {:?}", data_str)
                         );
                         let decoded_data = hex::decode(&*data_str);
                         self.handle_decoded_data(decoded_data);
@@ -1147,12 +1149,12 @@ where
                             .get(2)
                             .map(|osc_data| String::from_utf8_lossy(osc_data))
                         else {
-                            log::warn!("Warp OSC marker did not contain payload");
+                            log::warn!("LocalShell OSC marker did not contain payload");
                             return;
                         };
                         safe_debug!(
-                            safe: ("Received Warp OSC string for shell hook"),
-                            full: ("Received Warp OSC string for shell hook with JSON payload: {:?}", data_str)
+                            safe: ("Received LocalShell OSC string for shell hook"),
+                            full: ("Received LocalShell OSC string for shell hook with JSON payload: {:?}", data_str)
                         );
                         let hook = serde_json::from_str::<DProtoHook>(&data_str);
                         self.handle_unencoded_hook(hook)
@@ -1168,7 +1170,7 @@ where
             }
 
             WARP_RESET_GRID_OSC_MARKER => {
-                log::debug!("Received Warp OSC string for reset grid");
+                log::debug!("Received LocalShell OSC string for reset grid");
                 self.handler.on_reset_grid();
             }
 
@@ -1183,7 +1185,7 @@ where
                 Some(&WARP_COMPLETIONS_MATCH_RESULT_BYTE) => {
                     let Some(match_text) = decode_hex_completions_payload(params.get(2)) else {
                         log::warn!(
-                            "Warp completions match result OSC marker was missing or had an \
+                            "LocalShell completions match result OSC marker was missing or had an \
                              invalid hex payload; skipping this match"
                         );
                         return;
@@ -1200,18 +1202,18 @@ where
                         .map(|osc_data| String::from_utf8_lossy(osc_data))
                     else {
                         log::warn!(
-                            "Warp completions replacement span OSC marker did not contain payload"
+                            "LocalShell completions replacement span OSC marker did not contain payload"
                         );
                         return;
                     };
                     let Some((start_str, length_str)) = data_str.split_once(',') else {
                         safe_warn!(
                             safe: (
-                                "Warp completions replacement span OSC marker payload was not a \
+                                "LocalShell completions replacement span OSC marker payload was not a \
                                  comma-separated pair"
                             ),
                             full: (
-                                "Warp completions replacement span OSC marker payload was not a \
+                                "LocalShell completions replacement span OSC marker payload was not a \
                                  comma-separated pair: {data_str:?}"
                             )
                         );
@@ -1222,11 +1224,11 @@ where
                     else {
                         safe_warn!(
                             safe: (
-                                "Warp completions replacement span OSC marker payload was not a \
+                                "LocalShell completions replacement span OSC marker payload was not a \
                                  pair of non-negative integers"
                             ),
                             full: (
-                                "Warp completions replacement span OSC marker payload was not a \
+                                "LocalShell completions replacement span OSC marker payload was not a \
                                  pair of non-negative integers: {data_str:?}"
                             )
                         );
@@ -1255,11 +1257,11 @@ where
                         _ => {
                             safe_warn!(
                                 safe: (
-                                    "Invalid Warp OSC marker parameter for completions match \
+                                    "Invalid LocalShell OSC marker parameter for completions match \
                                      metadata"
                                 ),
                                 full: (
-                                    "Invalid Warp OSC marker parameter for completions match \
+                                    "Invalid LocalShell OSC marker parameter for completions match \
                                      metadata: {parameter}"
                                 )
                             );
@@ -1267,7 +1269,9 @@ where
                     }
                 }
                 _ => {
-                    log::warn!("Received a Warp OSC completions marker missing required param.");
+                    log::warn!(
+                        "Received a LocalShell OSC completions marker missing required param."
+                    );
                 }
             },
 

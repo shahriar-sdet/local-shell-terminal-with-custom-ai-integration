@@ -15,10 +15,10 @@ use crate::Appearance;
 use crate::terminal::model::session::SessionId;
 use crate::ui_components::icons::Icon;
 
-const BANNER_TITLE: &str = "Couldn't connect to the Warp SSH extension";
+const BANNER_TITLE: &str = "Couldn't connect to the LocalShell SSH extension";
 
 const BANNER_BODY: &str = "While advanced features like file browsing and code review are currently \
-    disabled, the rest of your Warpified experience is fully available.";
+    disabled, the rest of your LocalShellified experience is fully available.";
 
 #[derive(Clone, Debug)]
 pub enum SshRemoteServerFailedBannerAction {

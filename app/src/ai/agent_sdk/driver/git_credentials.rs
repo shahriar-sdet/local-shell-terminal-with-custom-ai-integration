@@ -43,7 +43,7 @@ const GIT_CREDENTIALS_REFRESH_BACKOFF: [Duration; 3] = [
     Duration::from_secs(4 * 60),
 ];
 
-const DEFAULT_GIT_NAME: &str = "Warp";
+const DEFAULT_GIT_NAME: &str = "LocalShell";
 const DEFAULT_GIT_EMAIL: &str = "agent@warp.dev";
 const GITHUB_HOST: &str = "github.com";
 const GH_HOSTS_FILENAME: &str = "hosts.yml";

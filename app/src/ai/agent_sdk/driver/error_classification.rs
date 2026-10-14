@@ -164,7 +164,7 @@ pub fn classify_driver_error(error: &AgentDriverError) -> (AgentTaskState, TaskS
             AgentTaskState::Failed,
             TaskStatusUpdate::with_error_code(
                 format!(
-                    "Saved prompt not found for ID {id}. Verify the prompt exists in your Warp Drive."
+                    "Saved prompt not found for ID {id}. Verify the prompt exists in your LocalShell Drive."
                 ),
                 PlatformErrorCode::ResourceNotFound,
             ),

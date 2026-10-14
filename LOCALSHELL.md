@@ -8,7 +8,8 @@ This guide has four parts. Do them in order; each part only depends on the ones 
 4. **Verify the network behaviour.** Optional, for you or your security team.
 
 Then come updating, uninstalling and troubleshooting. What LocalShell is and why it exists is in
-the [README](README.md).
+the [README](README.md). To let an AI coding agent do Part 1 for you, point it at
+[BUILD_WITH_AI.md](BUILD_WITH_AI.md).
 
 ---
 
@@ -50,13 +51,17 @@ the [README](README.md).
 
 1. If `brew --version` doesn't work, install Homebrew from [brew.sh](https://brew.sh) and follow
    the "Next steps" it prints to add `brew` to your shell.
-2. Install the protocol-buffer compiler and the DMG tool:
+2. Install the protocol-buffer compiler, the DMG tool and Git LFS, then turn on Git LFS:
 
    ```bash
-   brew install protobuf create-dmg
+   brew install protobuf create-dmg git-lfs
+   git lfs install
    ```
 
-3. Check: `protoc --version` prints a version number.
+   Git LFS downloads the app's input-classifier models when you get the source in Step 4.
+   Without it they arrive as small placeholder files and the app can't load them.
+
+3. Check: `protoc --version` and `git lfs version` both print a version number.
 
 ### Step 3. Install Rust
 
@@ -75,6 +80,10 @@ cd localshell
 ```
 
 Every command from here on runs inside this `localshell` directory.
+
+Check: `ls -lh crates/input_classifier/models/onnx/` lists three `bert_tiny_v*.onnx` files of about
+17 MB each. If they're only a few hundred bytes, Git LFS wasn't on during the clone; run
+`git lfs pull`.
 
 ### Step 5. Install the pinned Rust version and the packaging tools
 
@@ -104,19 +113,29 @@ Check: `cargo --version` prints `cargo 1.92.0`.
 - `--selfsign` signs the app with an "Apple Development" certificate if your keychain has one,
   and with an ad-hoc signature otherwise. No Apple Developer account is needed.
 
-The first build can take an hour or more. Near the end, macOS may ask to let Terminal control
-Finder; allow it, because the DMG tool uses it to arrange the DMG window.
+The first build takes from about 15 minutes to over an hour, depending on the Mac; later builds
+are faster. Near the end, macOS may ask to let Terminal control Finder; allow it, because the DMG
+tool uses it to arrange the DMG window.
 
 ### Step 7. Check the result
 
+The build writes everything to `target/release-lto/bundle/osx/` inside the `localshell` directory:
+
+| File | What it is |
+|---|---|
+| `LocalShell.dmg` | The installer. This is the file you use in Part 2 and can keep or copy elsewhere. |
+| `LocalShell.app` | The same app, unpacked. |
+| `localshell.dSYM` | Debug symbols for reading crash backtraces. Not needed to run the app. |
+
 ```bash
 ls target/release-lto/bundle/osx/
-codesign -dv target/release-lto/bundle/osx/LocalShell.app 2>&1 | grep -E "Identifier|Signature|Authority"
+codesign -dvv target/release-lto/bundle/osx/LocalShell.app 2>&1 | grep -E "Identifier|Signature|Authority"
 ```
 
-You should see `LocalShell.dmg` and `LocalShell.app`, with
-`Identifier=io.github.shahriar-sdet.LocalShell`. For an ad-hoc build the signature shows as
-`Signature=adhoc`; with a certificate, `Authority` names it.
+You should see `Identifier=io.github.shahriar-sdet.LocalShell`. For an ad-hoc build the signature
+shows as `Signature=adhoc`; with a certificate, the first `Authority` line names it.
+
+Each build replaces the previous files in this folder.
 
 ---
 
@@ -215,9 +234,13 @@ reasoning off. With LM Studio and **Load models for each task** turned on, Local
 task's model with that task's context length, and reuses an already-loaded copy that has at least
 that much.
 
-All of this is stored in `~/.localshell/settings.toml` and can be edited there:
+All of this is stored in `~/.localshell/settings.toml` and can be edited there. LocalShell picks up
+changes to the file while it runs. The **AI features** switch is the `is_any_ai_enabled` line:
 
 ```toml
+[agents.warp_agent]
+is_any_ai_enabled = true
+
 [agents.local_ai]
 provider = "lm_studio"            # or "open_ai_compatible"
 base_url = "http://localhost:1234/v1"
@@ -251,7 +274,9 @@ reasoning = "off"
    ```
 
    The only remote address should be your AI endpoint. Connections made by commands you run in
-   the terminal belong to those commands (for example `git`), not to LocalShell.
+   the terminal belong to those commands (for example `git`), not to LocalShell. `nettop` shows
+   only connections that are open at that moment, so a short request can come and go between two
+   refreshes; a firewall logs every attempt.
 
 ---
 
@@ -280,10 +305,13 @@ Quit LocalShell, then delete:
 | Symptom | Fix |
 |---|---|
 | Build: `Could not find protoc` | Part 1 Step 2: `brew install protobuf`, then open a new terminal. |
+| Log: `Failed to initialize candle inference runner` | The models are Git LFS placeholders. Do Part 1 Step 2, run `git lfs pull`, then rebuild. |
 | Build: an error mentioning `metal` or `metallib` | Part 1 Step 1: make sure Xcode is selected and the Metal toolchain check passes. |
 | Build: `no such command: bundle` | Part 1 Step 5: run `./script/install_cargo_bundle`. |
 | Build: `no such command: about` | Part 1 Step 5: run `./script/install_cargo_release_deps --no-build-deps`. |
+| The app quits right after opening | Look for `panicked` in `~/Library/Logs/localshell.log`. To open it with AI off meanwhile, rename `~/.localshell/settings.toml`. |
 | macOS says the app "is damaged" or "can't be opened" | Part 2 Step 2: remove the quarantine flag with the `xattr` command. |
+| A shell config or tool that looks for Warp doesn't detect LocalShell | LocalShell sets `TERM_PROGRAM=LocalShell`, not `WarpTerminal`. Update the check in your shell config. |
 | "Could not reach the AI endpoint" | Make sure LM Studio's server is running and the endpoint URL ends in `/v1`. |
 | "No models found" | Download a model in LM Studio, then click **Refresh models**. |
 | The agent describes commands but never runs them | The model isn't trained for tool use; choose another Agent model. |

@@ -96,13 +96,17 @@ team makes. What it gives them is a short, checkable answer to "where does the a
 
 ## Get started
 
-1. **Build the app** on an Apple Silicon Mac with Xcode.
+1. **Build the app** on an Apple Silicon Mac with Xcode. The build produces the installer at
+   `target/release-lto/bundle/osx/LocalShell.dmg`.
 2. **Install it** and allow it in macOS (the build is self-signed, so macOS may ask once).
 3. **Set up AI:** install LM Studio and pick a model, then in LocalShell open Settings → Agents →
    AI provider.
 
 Each step is covered in **[LOCALSHELL.md](LOCALSHELL.md)**, together with verifying the network
 behaviour, updating and troubleshooting.
+
+To have an AI coding agent (Claude Code, Codex, Cursor and the like) prepare the Mac and build
+for you, point it at **[BUILD_WITH_AI.md](BUILD_WITH_AI.md)**.
 
 ## Before you use LocalShell at work
 
@@ -117,8 +121,9 @@ legal advice.
   `THIRD_PARTY_LICENSES.txt` in the app bundle.
 - **No warranty.** LocalShell is provided as is, without warranty of any kind, as the AGPL states.
 - **Trademarks.** "Warp" and the Warp logo are trademarks of Denver Technologies, Inc. LocalShell
-  has its own name and icon. Some feature names and messages inside the app (for example
-  "Warpify") still come from Warp.
+  has its own name and icon. Warp is named in the legal notices and where something refers to
+  Warp itself, such as the link to Warp's documentation; a few messages inside the app may still
+  mention Warp.
 - **Data stored on your Mac.** Nothing below leaves the Mac, but it is stored unencrypted unless
   the disk is (FileVault):
   - Settings, including the AI endpoint's API key in plain text: `~/.localshell/settings.toml`

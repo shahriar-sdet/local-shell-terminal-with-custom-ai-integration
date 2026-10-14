@@ -230,6 +230,9 @@ impl TelemetryApi {
         event: impl warp_core::telemetry::TelemetryEvent,
         settings_snapshot: PrivacySettingsSnapshot,
     ) -> Result<()> {
+        if !ChannelState::is_telemetry_available() {
+            return Ok(());
+        }
         let event = warpui::telemetry::create_event(
             user_id.map(|uid| uid.as_string()),
             anonymous_id,

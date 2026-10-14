@@ -15,7 +15,7 @@ define_settings_group!(WarpDriveSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "warp_drive.sorting_choice",
-        description: "The sort order for items in Warp Drive.",
+        description: "The sort order for items in LocalShell Drive.",
     },
     sharing_onboarding_block_shown: WarpDriveSharingOnboardingBlockShown {
         type: bool,
@@ -34,7 +34,7 @@ define_settings_group!(WarpDriveSettings, settings: [
         surface: settings::SettingSurfaces::GUI,
         private: false,
         toml_path: "warp_drive.enabled",
-        description: "Whether Warp Drive is enabled.",
+        description: "Whether LocalShell Drive is enabled.",
     },
 ]);
 

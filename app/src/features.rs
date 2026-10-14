@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use warp_core::channel::ChannelState;
+use warp_core::context_flag::ContextFlag;
 pub use warp_core::features::*;
 
 /// Mark all features which should be enabled on the current channel as enabled.
@@ -16,6 +17,7 @@ pub fn init_feature_flags() {
         for flag in LOCALSHELL_ENABLED_FLAGS {
             flag.set_enabled(true);
         }
+        ContextFlag::set_local_shell();
     }
     mark_initialized();
 }

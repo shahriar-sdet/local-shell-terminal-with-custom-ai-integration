@@ -933,7 +933,6 @@ impl LLMPreferences {
         if FeatureFlag::CustomModelRouters.is_enabled() {
             me.rebuild_custom_model_routers(ctx);
         }
-        me.apply_local_models(ctx);
 
         // In agent mode eval builds, eagerly kick off a fetch of the model list from the server
         // so that it's available by the time test steps like `set_preferred_agent_mode_llm` run.
@@ -2024,8 +2023,9 @@ impl LLMPreferences {
     }
 
     /// Publishes the endpoint's models as the choices for every agent feature. The configured
-    /// agent model is always offered, even before the endpoint has answered.
-    fn apply_local_models(&mut self, ctx: &mut ModelContext<Self>) {
+    /// agent model is always offered, even before the endpoint has answered. Needs
+    /// [`AIExecutionProfilesModel`] to be registered.
+    pub(crate) fn apply_local_models(&mut self, ctx: &mut ModelContext<Self>) {
         let runtime = LocalAiRuntime::as_ref(ctx);
         let configured = AISettings::as_ref(ctx)
             .local_ai

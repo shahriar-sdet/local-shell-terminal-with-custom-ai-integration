@@ -123,7 +123,7 @@ pub enum PrepareEnvironmentError {
         second_owner: String,
     },
     #[error(
-        "Repository {repo_name} has a code forge this client build doesn't support; update Warp to a version that does"
+        "Repository {repo_name} has a code forge this client build doesn't support; update LocalShell to a version that does"
     )]
     UnsupportedRepositoryForge { repo_name: String },
     #[error("Environment checkout helper failed: {reason}")]

@@ -89,21 +89,12 @@ impl ChannelState {
 
     /// The product name used wherever the app names itself, such as menus and the command palette.
     pub fn app_name() -> &'static str {
-        if Self::is_local_shell() {
-            "LocalShell"
-        } else {
-            "Warp"
-        }
+        "LocalShell"
     }
 
-    /// The name of the built-in AI agent. LocalShell's agent runs on the user's own model, so it
-    /// isn't presented as Warp's.
+    /// The name of the built-in AI agent.
     pub fn agent_name() -> &'static str {
-        if Self::is_local_shell() {
-            "Agent"
-        } else {
-            "Warp Agent"
-        }
+        "LocalShell Agent"
     }
 
     pub fn is_release_bundle() -> bool {

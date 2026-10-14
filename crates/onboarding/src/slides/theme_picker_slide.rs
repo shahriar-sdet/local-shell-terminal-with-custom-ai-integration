@@ -271,7 +271,7 @@ impl ThemePickerSlide {
         );
 
         let account_first = FeatureFlag::AccountFirstOnboarding.is_enabled();
-        let next_label = if account_first { "Next" } else { "Get Warping" };
+        let next_label = if account_first { "Next" } else { "Get started" };
 
         let enter = Keystroke::parse("enter").unwrap_or_default();
         let next_button = self.next_button.render(

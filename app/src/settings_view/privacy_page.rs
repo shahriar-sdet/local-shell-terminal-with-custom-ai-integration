@@ -75,7 +75,7 @@ const USER_SECRET_REGEX_DESCRIPTION: &str = "Use regex to define additional secr
     to make it case-insensitive.";
 const TELEMETRY_DESCRIPTION_OLD: &str = "App analytics help us make the product better for you. We only collect \
     app usage metadata, never console input or output.";
-const TELEMETRY_TITLE: &str = "Help improve Warp";
+const TELEMETRY_TITLE: &str = "Help improve LocalShell";
 const TELEMETRY_DESCRIPTION: &str = "App analytics help us make the product better for you. We may collect \
     certain console interactions to improve Warp's AI capabilities.";
 const TELEMETRY_DOCS_URL: &str = "https://docs.warp.dev/support-and-community/privacy-and-security/privacy#what-telemetry-data-does-warp-collect-and-why";
@@ -1550,7 +1550,7 @@ impl SettingsWidget for AppAnalyticsWidget {
             Align::new(
                 ui_builder
                     .link(
-                        "Read more about Warp's use of data".into(),
+                        "Read more about LocalShell's use of data".into(),
                         Some(TELEMETRY_DOCS_URL.into()),
                         None,
                         self.docs_link_mouse_state.clone(),

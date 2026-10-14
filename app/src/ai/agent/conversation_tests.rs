@@ -738,6 +738,7 @@ fn restored_metadata_with_credits_marks_usage_even_without_billed_cost() {
 fn restored_legacy_conversation_keeps_cost_unavailable_after_follow_up() {
     App::test((), |mut app| async move {
         initialize_custom_endpoint_usage_test_app(&mut app);
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         app.add_singleton_model(LLMPreferences::new);
 
         let mut conversation =
@@ -781,6 +782,7 @@ fn update_cost_and_usage_resolves_custom_endpoint_alias_for_footer_usage() {
                 ctx,
             );
         });
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         app.add_singleton_model(LLMPreferences::new);
 
         let mut conversation = AIConversation::new(false, false);
@@ -817,6 +819,7 @@ fn update_cost_and_usage_resolves_custom_endpoint_alias_for_footer_usage() {
 fn update_cost_and_usage_uses_fallback_label_for_unknown_custom_endpoint() {
     App::test((), |mut app| async move {
         initialize_custom_endpoint_usage_test_app(&mut app);
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         app.add_singleton_model(LLMPreferences::new);
 
         let mut conversation = AIConversation::new(false, false);
@@ -890,6 +893,7 @@ fn credits_usage_metadata(
 fn usage_totals_reads_gui_credits_without_a_dollar_total() {
     App::test((), |mut app| async move {
         initialize_custom_endpoint_usage_test_app(&mut app);
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         app.add_singleton_model(LLMPreferences::new);
 
         let mut conversation = AIConversation::new(false, false);
@@ -994,6 +998,7 @@ fn total_cost_in_cents_falls_back_to_billed_baseline_without_charged_usage() {
 fn update_cost_and_usage_resets_stale_charged_usage_for_last_block_on_new_user_turn() {
     App::test((), |mut app| async move {
         initialize_custom_endpoint_usage_test_app(&mut app);
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         app.add_singleton_model(LLMPreferences::new);
 
         let mut conversation = AIConversation::new(false, false);
@@ -1041,6 +1046,7 @@ fn footer_model_token_usage_keeps_custom_endpoint_usage_distinct_from_same_label
                 ctx,
             );
         });
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         app.add_singleton_model(LLMPreferences::new);
 
         let category = "primary_agent".to_string();
@@ -1107,6 +1113,7 @@ fn footer_model_token_usage_keeps_custom_endpoint_usage_distinct_from_same_label
 fn footer_model_token_usage_preserves_unresolved_custom_endpoint_usage_with_fallback_label() {
     App::test((), |mut app| async move {
         initialize_custom_endpoint_usage_test_app(&mut app);
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         app.add_singleton_model(LLMPreferences::new);
 
         let category = "primary_agent".to_string();

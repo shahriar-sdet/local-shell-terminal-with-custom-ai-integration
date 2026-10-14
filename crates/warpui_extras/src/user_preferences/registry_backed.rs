@@ -28,7 +28,7 @@ impl RegistryBackedPreferences {
         CURRENT_USER.create(self.app_key_path.clone()).map_err(|e| {
             report_error!(
                 anyhow::Error::new(e.clone())
-                    .context("unable to access Warp app key in Windows Registry")
+                    .context("unable to access LocalShell app key in Windows Registry")
             );
             super::Error::IoError(io::Error::from(e))
         })

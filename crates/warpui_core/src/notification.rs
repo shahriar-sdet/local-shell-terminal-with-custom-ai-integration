@@ -114,10 +114,10 @@ impl NotificationSendError {
         match self {
             NotificationSendError::PermissionsDenied
             | NotificationSendError::PermissionsNotYetGranted => {
-                "Warp tried to send you a notification for the last block but does not have permission."
+                "LocalShell tried to send you a notification for the last block but does not have permission."
             }
             NotificationSendError::Other { .. } => {
-                "Warp tried to send you a notification for the last block, but something went wrong."
+                "LocalShell tried to send you a notification for the last block, but something went wrong."
             }
         }
     }

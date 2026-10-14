@@ -110,7 +110,7 @@ pub struct GeapMintBinding {
 // body, so interpolating it would leak it to Sentry via `report_error!`.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum LoadGeapCredentialsError {
-    #[error("failed to mint a Warp identity token")]
+    #[error("failed to mint a LocalShell identity token")]
     MintIdentityToken { detail: String },
     #[error("STS token exchange failed")]
     ExchangeToken { status: Option<u16>, detail: String },
@@ -163,7 +163,7 @@ impl LoadGeapCredentialsError {
     pub fn user_facing(&self) -> (String, String, GeapRecoveryAction) {
         match self {
             Self::MintIdentityToken { .. } => (
-                "Couldn't authenticate with Warp".to_string(),
+                "Couldn't authenticate with LocalShell".to_string(),
                 "Warp couldn't create Gemini Enterprise credentials. Check your network \
                  connection and that you're signed in to Warp, then try again."
                     .to_string(),

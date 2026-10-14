@@ -28,7 +28,7 @@ use crate::workspaces::workspace::ChargeUnit;
 const PROVIDER_BUTTON_ICON_SIZE: f32 = 14.;
 const PROVIDER_BUTTON_ICON_TEXT_GAP: f32 = 8.;
 const ERROR_APOLOGY_TEXT: &str = "I'm sorry, I couldn't complete that request.";
-const INTERNAL_WARP_ERROR: &str = "Internal Warp error.";
+const INTERNAL_WARP_ERROR: &str = "Internal LocalShell error.";
 pub const FAILED_OUTPUT_USAGE_NOTICE_TEXT: &str = "This response won't count towards your usage.";
 pub const OUT_OF_CREDITS_SUBSCRIBE_LABEL: &str = "Subscribe";
 /// Disclosure shown in place of a ChatGPT subscription error once the user has switched the
@@ -140,7 +140,7 @@ pub fn failed_output_presentation(
             }
         }
         RenderableAIError::ServerOverloaded => FailedOutputPresentation::Message(
-            "Warp is currently overloaded. Please try again later.".to_string(),
+            "LocalShell is currently overloaded. Please try again later.".to_string(),
         ),
         RenderableAIError::InternalWarpError => FailedOutputPresentation::Message(format!(
             "{ERROR_APOLOGY_TEXT}\n\n{INTERNAL_WARP_ERROR}"

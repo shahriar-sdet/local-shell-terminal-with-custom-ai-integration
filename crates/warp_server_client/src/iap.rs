@@ -416,14 +416,14 @@ impl IapManager {
                 }
                 state.set_loaded(cached);
                 self.consecutive_failures = 0;
-                log::info!("Warp Staging IAP token refreshed");
+                log::info!("LocalShell Staging IAP token refreshed");
                 ctx.emit(IapManagerEvent::StateChanged);
                 ctx.notify();
                 self.schedule_next_refresh(expires_at, ctx);
             }
             Err(err) => {
                 let message = format!("{err:#}");
-                log::warn!("Warp Staging IAP token fetch failed: {message}");
+                log::warn!("LocalShell Staging IAP token fetch failed: {message}");
                 let is_first_failure_of_streak = self.consecutive_failures == 0;
                 state.set_failed(message.clone());
                 ctx.emit(IapManagerEvent::RefreshFailed {
@@ -556,7 +556,7 @@ async fn resolve_wif_identity_token(
         minter
             .mint_identity_token(federation_audience.to_string(), WIF_IDENTITY_TOKEN_DURATION)
             .await
-            .map_err(|err| anyhow::anyhow!("failed to mint Warp identity token: {err:#}"))
+            .map_err(|err| anyhow::anyhow!("failed to mint LocalShell identity token: {err:#}"))
     }
 }
 

@@ -411,7 +411,7 @@ impl HarnessRunner for AcpHarnessRunner {
                         },
                         client_info: ClientInfo {
                             name: "warp".to_owned(),
-                            title: "Warp".to_owned(),
+                            title: "LocalShell".to_owned(),
                             version: ChannelState::app_version()
                                 .unwrap_or(env!("CARGO_PKG_VERSION"))
                                 .to_owned(),

@@ -1904,3 +1904,46 @@ fn explicit_child_model_pin_preserves_gui_behavior_and_only_emits_for_effective_
         assert_eq!(active_model_events.get(), 1);
     });
 }
+
+#[test]
+fn configured_local_model_is_seeded_without_profiles_registered_first() {
+    App::test((), |mut app| async move {
+        initialize_settings_for_tests(&mut app);
+        app.add_singleton_model(|_| ServerApiProvider::new_for_test());
+        app.add_singleton_model(|_| AuthStateProvider::new_for_test());
+        app.add_singleton_model(AuthManager::new_for_test);
+        app.add_singleton_model(|_| NetworkStatus::new());
+        app.add_singleton_model(UserWorkspaces::default_mock);
+        app.add_singleton_model(CloudModel::mock);
+        app.add_singleton_model(TeamTesterStatus::mock);
+        app.add_singleton_model(SyncQueue::mock);
+        app.add_singleton_model(UpdateManager::mock);
+        app.add_singleton_model(|_| TemplatableMCPServerManager::default());
+        AISettings::handle(&app).update(&mut app, |settings, ctx| {
+            let mut config = local_ai::LocalAiConfig::default();
+            config.agent.model = "local-model".to_string();
+            settings.local_ai.set_value(config, ctx).unwrap();
+        });
+
+        // App startup registers these before the execution profiles model.
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
+        let llm_preferences = app.add_singleton_model(LLMPreferences::new);
+        app.add_singleton_model(|ctx| {
+            AIExecutionProfilesModel::new(&LaunchMode::new_for_unit_test(), ctx)
+        });
+        llm_preferences.update(&mut app, |preferences, ctx| {
+            preferences.apply_local_models(ctx)
+        });
+
+        UserWorkspaces::handle(&app).read(&app, |workspaces, _| {
+            assert_eq!(
+                workspaces
+                    .feature_model_choice_for_team_uid(None)
+                    .agent_mode
+                    .default_id
+                    .as_str(),
+                "local-model"
+            );
+        });
+    });
+}

@@ -145,9 +145,8 @@ use crate::ai::llms::{
     AvailableLLMs, DisableReason, LLMContextWindow, LLMInfo, LLMModelHost, LLMSpec,
     LLMUsageMetadata, ModelsByFeature, RoutingHostConfig,
 };
-use crate::ai::local_generation;
 use crate::ai::request_usage_model::RequestLimitInfo;
-use crate::ai::{AICreditAvailability, RequestUsageInfo};
+use crate::ai::{AICreditAvailability, RequestUsageInfo, local_generation};
 use crate::ai_assistant::execution_context::WarpAiExecutionContext;
 use crate::ai_assistant::requests::GenerateDialogueResult;
 use crate::ai_assistant::utils::TranscriptPart;
@@ -2006,7 +2005,7 @@ impl AIClient for ServerApi {
         ai_execution_context: Option<WarpAiExecutionContext>,
     ) -> anyhow::Result<GenerateDialogueResult> {
         let system = format!(
-            "You are Warp AI, an assistant inside the user's terminal. {} Answer questions \
+            "You are LocalShell AI, an assistant inside the user's terminal. {} Answer questions \
              about commands, errors and programming concisely in Markdown, with commands in \
              fenced code blocks.",
             local_generation::environment_line(ai_execution_context.as_ref())

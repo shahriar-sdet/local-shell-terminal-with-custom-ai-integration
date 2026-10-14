@@ -172,7 +172,7 @@ impl EnvironmentCommandRunner {
                         OutputFormat::Text | OutputFormat::Pretty
                     ) {
                         println!(
-                            "All Warp dev images contain Python and Node. For more information, see: {}\n",
+                            "All LocalShell dev images contain Python and Node. For more information, see: {}\n",
                             WARP_DEV_ENVIRONMENTS_REPO
                         );
                     }
@@ -381,7 +381,7 @@ impl EnvironmentCommandRunner {
                 ListWarpDevImagesResult::ListWarpDevImagesOutput(output) => {
                     if output.images.is_empty() {
                         super::report_fatal_error(
-                            anyhow::anyhow!("No Warp dev images available."),
+                            anyhow::anyhow!("No LocalShell dev images available."),
                             ctx,
                         );
                         return;

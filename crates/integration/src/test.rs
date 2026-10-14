@@ -5622,7 +5622,7 @@ pub fn test_terminal_announces_capabilities_to_shell() -> Builder {
             0,
             format!("echo ${var_prefix}TERM_PROGRAM"),
             ExpectedExitStatus::Success,
-            "WarpTerminal",
+            "LocalShell",
         ))
         .with_step(execute_command_for_single_terminal_in_tab(
             0,

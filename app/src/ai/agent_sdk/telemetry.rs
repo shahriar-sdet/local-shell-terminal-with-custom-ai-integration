@@ -405,19 +405,27 @@ impl TelemetryEventDesc for CliTelemetryEventDiscriminants {
 
     fn description(&self) -> &'static str {
         match self {
-            CliTelemetryEventDiscriminants::AgentRun => "Ran an agent from the Warp CLI",
+            CliTelemetryEventDiscriminants::AgentRun => "Ran an agent from the LocalShell CLI",
             CliTelemetryEventDiscriminants::AgentRunAmbient => {
-                "Ran an ambient agent from the Warp CLI"
+                "Ran an ambient agent from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::AgentProfileList => {
-                "Listed agent profiles from the Warp CLI"
+                "Listed agent profiles from the LocalShell CLI"
             }
-            CliTelemetryEventDiscriminants::AgentList => "Listed agents from the Warp CLI",
-            CliTelemetryEventDiscriminants::AgentGet => "Got agent details from the Warp CLI",
-            CliTelemetryEventDiscriminants::AgentCreate => "Created an agent from the Warp CLI",
-            CliTelemetryEventDiscriminants::AgentUpdate => "Updated an agent from the Warp CLI",
-            CliTelemetryEventDiscriminants::AgentDelete => "Deleted an agent from the Warp CLI",
-            CliTelemetryEventDiscriminants::AgentSkills => "Listed agent skills from the Warp CLI",
+            CliTelemetryEventDiscriminants::AgentList => "Listed agents from the LocalShell CLI",
+            CliTelemetryEventDiscriminants::AgentGet => "Got agent details from the LocalShell CLI",
+            CliTelemetryEventDiscriminants::AgentCreate => {
+                "Created an agent from the LocalShell CLI"
+            }
+            CliTelemetryEventDiscriminants::AgentUpdate => {
+                "Updated an agent from the LocalShell CLI"
+            }
+            CliTelemetryEventDiscriminants::AgentDelete => {
+                "Deleted an agent from the LocalShell CLI"
+            }
+            CliTelemetryEventDiscriminants::AgentSkills => {
+                "Listed agent skills from the LocalShell CLI"
+            }
             CliTelemetryEventDiscriminants::EnvironmentList => {
                 "Listed cloud environments from the Warp CLI"
             }
@@ -434,139 +442,161 @@ impl TelemetryEventDesc for CliTelemetryEventDiscriminants {
                 "Got cloud environment details from the Warp CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentImageList => {
-                "Listed available base images from the Warp CLI"
+                "Listed available base images from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::EnvironmentCheckout => {
                 "Prepared structured environment checkouts"
             }
             CliTelemetryEventDiscriminants::MCPList => "Listed MCP servers from the Warp CLI",
-            CliTelemetryEventDiscriminants::ModelList => "Listed models from the Warp CLI",
+            CliTelemetryEventDiscriminants::ModelList => "Listed models from the LocalShell CLI",
             CliTelemetryEventDiscriminants::MemoryStoreList => {
-                "Listed memory stores from the Warp CLI"
+                "Listed memory stores from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreListMemories => {
-                "Listed memories in a memory store from the Warp CLI"
+                "Listed memories in a memory store from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreCreateMemory => {
-                "Created a manual memory in a memory store from the Warp CLI"
+                "Created a manual memory in a memory store from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreUpdateMemory => {
-                "Updated a memory in a memory store from the Warp CLI"
+                "Updated a memory in a memory store from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreDeleteMemory => {
-                "Deleted a memory from a memory store from the Warp CLI"
+                "Deleted a memory from a memory store from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreGetStore => {
-                "Got a memory store from the Warp CLI"
+                "Got a memory store from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreUpdateStore => {
-                "Updated a memory store from the Warp CLI"
+                "Updated a memory store from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreListStoreAgents => {
-                "Listed agents attached to a memory store from the Warp CLI"
+                "Listed agents attached to a memory store from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::MemoryStoreListVersions => {
-                "Listed version history of a memory from the Warp CLI"
+                "Listed version history of a memory from the LocalShell CLI"
             }
-            CliTelemetryEventDiscriminants::TaskList => "Listed tasks from the Warp CLI",
-            CliTelemetryEventDiscriminants::TaskGet => "Got status of task from the Warp CLI",
+            CliTelemetryEventDiscriminants::TaskList => "Listed tasks from the LocalShell CLI",
+            CliTelemetryEventDiscriminants::TaskGet => "Got status of task from the LocalShell CLI",
             CliTelemetryEventDiscriminants::ConversationGet => {
-                "Got conversation by ID from the Warp CLI"
+                "Got conversation by ID from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::RunConversationGet => {
-                "Got run conversation from the Warp CLI"
+                "Got run conversation from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageWatch => {
-                "Watched run messages from the Warp CLI"
+                "Watched run messages from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageSend => {
-                "Sent a run message from the Warp CLI"
+                "Sent a run message from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageList => {
-                "Listed run messages from the Warp CLI"
+                "Listed run messages from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageRead => {
-                "Read a run message from the Warp CLI"
+                "Read a run message from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::RunMessageMarkDelivered => {
-                "Marked a run message as delivered from the Warp CLI"
+                "Marked a run message as delivered from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::Login => "Logged in via the Warp CLI",
             CliTelemetryEventDiscriminants::Logout => "Logged out via the Warp CLI",
-            CliTelemetryEventDiscriminants::Whoami => "Printed current user info from the Warp CLI",
-            CliTelemetryEventDiscriminants::ProviderSetup => "Set up a provider via the Warp CLI",
-            CliTelemetryEventDiscriminants::ProviderList => "Listed providers from the Warp CLI",
+            CliTelemetryEventDiscriminants::Whoami => {
+                "Printed current user info from the LocalShell CLI"
+            }
+            CliTelemetryEventDiscriminants::ProviderSetup => {
+                "Set up a provider via the LocalShell CLI"
+            }
+            CliTelemetryEventDiscriminants::ProviderList => {
+                "Listed providers from the LocalShell CLI"
+            }
             CliTelemetryEventDiscriminants::IntegrationCreate => {
-                "Created an integration from the Warp CLI"
+                "Created an integration from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::IntegrationUpdate => {
-                "Updated an integration from the Warp CLI"
+                "Updated an integration from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::IntegrationList => {
-                "Listed integrations from the Warp CLI"
+                "Listed integrations from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::ArtifactUpload => {
-                "Uploaded an artifact from the Warp CLI"
+                "Uploaded an artifact from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::ArtifactGet => {
-                "Got artifact metadata from the Warp CLI"
+                "Got artifact metadata from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::ArtifactDownload => {
-                "Downloaded an artifact from the Warp CLI"
+                "Downloaded an artifact from the LocalShell CLI"
             }
-            CliTelemetryEventDiscriminants::ApiKeyList => "Listed API keys from the Warp CLI",
-            CliTelemetryEventDiscriminants::ApiKeyCreate => "Created an API key from the Warp CLI",
-            CliTelemetryEventDiscriminants::ApiKeyExpire => "Expired an API key from the Warp CLI",
+            CliTelemetryEventDiscriminants::ApiKeyList => "Listed API keys from the LocalShell CLI",
+            CliTelemetryEventDiscriminants::ApiKeyCreate => {
+                "Created an API key from the LocalShell CLI"
+            }
+            CliTelemetryEventDiscriminants::ApiKeyExpire => {
+                "Expired an API key from the LocalShell CLI"
+            }
             CliTelemetryEventDiscriminants::ScheduleCreate => {
-                "Created a scheduled agent from the Warp CLI"
+                "Created a scheduled agent from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleList => {
-                "Listed scheduled agents from the Warp CLI"
+                "Listed scheduled agents from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleGet => {
-                "Got scheduled agent configuration from the Warp CLI"
+                "Got scheduled agent configuration from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::SchedulePause => {
-                "Paused a scheduled agent from the Warp CLI"
+                "Paused a scheduled agent from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleUnpause => {
-                "Unpaused a scheduled agent from the Warp CLI"
+                "Unpaused a scheduled agent from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleUpdate => {
-                "Updated a scheduled agent from the Warp CLI"
+                "Updated a scheduled agent from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::ScheduleDelete => {
-                "Deleted a scheduled agent from the Warp CLI"
+                "Deleted a scheduled agent from the LocalShell CLI"
             }
-            CliTelemetryEventDiscriminants::SecretCreate => "Created a secret from the Warp CLI",
-            CliTelemetryEventDiscriminants::SecretDelete => "Deleted a secret from the Warp CLI",
-            CliTelemetryEventDiscriminants::SecretUpdate => "Updated a secret from the Warp CLI",
-            CliTelemetryEventDiscriminants::SecretList => "Listed secrets from the Warp CLI",
+            CliTelemetryEventDiscriminants::SecretCreate => {
+                "Created a secret from the LocalShell CLI"
+            }
+            CliTelemetryEventDiscriminants::SecretDelete => {
+                "Deleted a secret from the LocalShell CLI"
+            }
+            CliTelemetryEventDiscriminants::SecretUpdate => {
+                "Updated a secret from the LocalShell CLI"
+            }
+            CliTelemetryEventDiscriminants::SecretList => "Listed secrets from the LocalShell CLI",
             CliTelemetryEventDiscriminants::FederateIssueToken => {
-                "Issued a federated identity token from the Warp CLI"
+                "Issued a federated identity token from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::FederateIssueGcpToken => {
-                "Issued a GCP federated identity token from the Warp CLI"
+                "Issued a GCP federated identity token from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportPing => {
-                "Pinged harness-support from the Warp CLI"
+                "Pinged harness-support from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportReportArtifact => {
-                "Reported an artifact via harness-support from the Warp CLI"
+                "Reported an artifact via harness-support from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportNotifyUser => {
-                "Sent a user notification via harness-support from the Warp CLI"
+                "Sent a user notification via harness-support from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportFinishTask => {
-                "Reported task completion via harness-support from the Warp CLI"
+                "Reported task completion via harness-support from the LocalShell CLI"
             }
             CliTelemetryEventDiscriminants::HarnessSupportReportShutdown => {
-                "Reported agent shutdown via harness-support from the Warp CLI"
+                "Reported agent shutdown via harness-support from the LocalShell CLI"
             }
-            CliTelemetryEventDiscriminants::RunnerList => "Listed runners from the Warp CLI",
-            CliTelemetryEventDiscriminants::RunnerCreate => "Created a runner from the Warp CLI",
-            CliTelemetryEventDiscriminants::RunnerUpdate => "Updated a runner from the Warp CLI",
-            CliTelemetryEventDiscriminants::RunnerDelete => "Deleted a runner from the Warp CLI",
+            CliTelemetryEventDiscriminants::RunnerList => "Listed runners from the LocalShell CLI",
+            CliTelemetryEventDiscriminants::RunnerCreate => {
+                "Created a runner from the LocalShell CLI"
+            }
+            CliTelemetryEventDiscriminants::RunnerUpdate => {
+                "Updated a runner from the LocalShell CLI"
+            }
+            CliTelemetryEventDiscriminants::RunnerDelete => {
+                "Deleted a runner from the LocalShell CLI"
+            }
         }
     }
 

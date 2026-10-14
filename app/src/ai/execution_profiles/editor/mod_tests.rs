@@ -76,6 +76,7 @@ fn assert_context_window_limit_for_request(
         app.add_singleton_model(|ctx| {
             AIExecutionProfilesModel::new(&LaunchMode::new_for_unit_test(), ctx)
         });
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         let llm_preferences = app.add_singleton_model(LLMPreferences::new);
 
         let profile_model_id = model.id.clone();

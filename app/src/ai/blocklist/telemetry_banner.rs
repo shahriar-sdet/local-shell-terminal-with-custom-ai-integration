@@ -16,7 +16,7 @@ use crate::workspaces::workspace::UgcCollectionEnablementSetting;
 use crate::{Appearance, FeatureFlag, WorkspaceAction};
 
 const TITLE_EXISTING_USERS: &str = "We've updated our telemetry policy.";
-const TITLE_NEW_USERS: &str = "Help improve Warp.";
+const TITLE_NEW_USERS: &str = "Help improve LocalShell.";
 const DESCRIPTION: &str = "We may collect certain console interactions to improve Warp's AI capabilities. You can opt out any time.";
 const PRIVACY_URL: &str = "https://warp.dev/privacy";
 

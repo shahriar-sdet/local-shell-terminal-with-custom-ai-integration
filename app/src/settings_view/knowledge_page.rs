@@ -180,7 +180,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 FeatureFlag::AIRules.is_enabled() && FeatureFlag::SuggestedRules.is_enabled()
             }),
             ToggleSettingActionPair::new(
-                "Warp Drive as agent context",
+                "LocalShell Drive as agent context",
                 builder(SettingsAction::Knowledge(
                     KnowledgePageAction::ToggleWarpDriveContext,
                 )),
@@ -226,7 +226,7 @@ impl SettingsWidget for RulesWidget {
 
         let rules_description = vec![
             FormattedTextFragment::plain_text(
-                "Rules help the Warp Agent follow your conventions, whether for codebases or specific workflows. ",
+                "Rules help the LocalShell Agent follow your conventions, whether for codebases or specific workflows. ",
             ),
             FormattedTextFragment::hyperlink("Learn more", RULES_DOCS_URL),
         ];
@@ -347,7 +347,7 @@ impl SettingsWidget for WarpDriveContextWidget {
     ) -> Box<dyn Element> {
         let ai_settings = AISettings::as_ref(app);
         let toggle = render_ai_setting_toggle::<WarpDriveContextEnabled>(
-            "Warp Drive as agent context",
+            "LocalShell Drive as agent context",
             KnowledgePageAction::ToggleWarpDriveContext,
             *ai_settings.warp_drive_context_enabled,
             ai_settings.is_any_ai_enabled(app),

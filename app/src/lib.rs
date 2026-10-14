@@ -599,10 +599,12 @@ impl LaunchMode {
     /// Whether this launch mode should start the local loopback HTTP server
     /// (`crates/http_server`), which serves app-installation detection and profiling on a
     /// fixed port. Only GUI instances start it, since co-located windowless processes (daemon,
-    /// CLI, proxy, TUI) would otherwise contend for the fixed port.
+    /// CLI, proxy, TUI) would otherwise contend for the fixed port. LocalShell never starts it:
+    /// installation detection exists for warp.dev pages, and LocalShell shouldn't be detectable by
+    /// websites.
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
     fn should_start_local_http_server(&self) -> bool {
-        self.is_gui()
+        self.is_gui() && !ChannelState::is_local_shell()
     }
 
     /// Returns `true` if this process can build and sync codebase indices.
@@ -987,7 +989,7 @@ pub fn run_tui_worker_if_requested() -> Option<Result<()>> {
     let args = warp_cli::Args::from_env();
     let Some(warp_cli::Command::Worker(worker)) = args.command() else {
         return Some(Err(anyhow!(
-            "Recognized a Warp worker invocation, but failed to parse its worker command"
+            "Recognized a LocalShell worker invocation, but failed to parse its worker command"
         )));
     };
     Some(run_worker_command(worker))
@@ -2570,6 +2572,7 @@ pub(crate) fn initialize_app(
     ctx.add_singleton_model(move |_| timer);
 
     ctx.add_singleton_model(|ctx| AIExecutionProfilesModel::new(launch_mode, ctx));
+    LLMPreferences::handle(ctx).update(ctx, |preferences, ctx| preferences.apply_local_models(ctx));
 
     ctx.add_singleton_model(DefaultTerminal::new);
 

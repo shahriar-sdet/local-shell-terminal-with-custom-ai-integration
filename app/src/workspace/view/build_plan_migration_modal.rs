@@ -522,7 +522,7 @@ impl BuildPlanMigrationModal {
         );
 
         let intro_text = if is_business {
-            "Your workspace has been updated to the new Warp Business Plan as the legacy Business plan is sunset."
+            "Your workspace has been updated to the new LocalShell Business Plan as the legacy Business plan is sunset."
         } else {
             "Your workspace has been updated to the Warp Build Plan as the legacy Pro, Turbo, and Lightspeed plans are sunset."
         };

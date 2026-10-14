@@ -383,7 +383,7 @@ const VIM_MODE_DISABLED_HINT: &str = "Vim mode disabled.";
 const VIM_MODE_PERSISTENCE_FAILED_HINT: &str = "Could not save the vim mode setting.";
 const THEME_PERSISTENCE_FAILED_HINT: &str = "Could not save the theme setting.";
 const ZERO_STATE_ASCII_INITIAL_LOAD_FAILED_HINT: &str =
-    "Could not load custom ASCII art. Using the built-in Warp logo.";
+    "Could not load custom ASCII art. Using the built-in LocalShell logo.";
 const ZERO_STATE_ASCII_RELOAD_FAILED_HINT: &str =
     "Could not reload custom ASCII art. Keeping the current object.";
 #[cfg(feature = "voice_input")]
@@ -5537,7 +5537,7 @@ impl TuiTerminalSessionView {
                     let label = if conversation.is_summarizing() {
                         "Summarizing conversation"
                     } else {
-                        "Warping"
+                        "Working"
                     };
                     content = content.child(
                         TuiContainer::new(self.render_warping_indicator(label, elapsed, ctx))
