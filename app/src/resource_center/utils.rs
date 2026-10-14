@@ -3,6 +3,7 @@
 
 use warpui::keymap::Keystroke;
 
+use crate::channel::ChannelState;
 use crate::util::bindings::CommandBinding;
 
 pub const BLOCKS_KEYBINDINGS: &[&str] = &[
@@ -119,7 +120,7 @@ pub fn get_additional_keybindings() -> Vec<CommandBinding> {
     vec![
         CommandBinding::new(
             "workspace:hide_warp".into(),
-            "Hide Warp".into(),
+            format!("Hide {}", ChannelState::app_name()),
             Some(Keystroke::parse("cmd-h").expect("Valid keystroke")),
         ),
         CommandBinding::new(
@@ -129,7 +130,7 @@ pub fn get_additional_keybindings() -> Vec<CommandBinding> {
         ),
         CommandBinding::new(
             "workspace:quit_warp".into(),
-            "Quit Warp".into(),
+            format!("Quit {}", ChannelState::app_name()),
             Some(Keystroke::parse("cmd-q").expect("Valid keystroke")),
         ),
         CommandBinding::new(

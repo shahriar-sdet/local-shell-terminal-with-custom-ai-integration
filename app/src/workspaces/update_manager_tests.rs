@@ -377,6 +377,7 @@ fn on_workspaces_updated_keeps_teams_distinct_and_prunes_a_team_the_response_omi
             &mut app,
         );
         initialize_llm_preferences_dependencies(&mut app);
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         app.add_singleton_model(LLMPreferences::new);
         let team_update_manager =
             app.add_singleton_model(|ctx| TeamUpdateManager::new(team_client, None, ctx));

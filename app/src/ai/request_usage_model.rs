@@ -138,6 +138,18 @@ impl Default for RequestLimitInfo {
     }
 }
 
+impl RequestLimitInfo {
+    /// Usage against the user's own endpoint is never metered.
+    pub fn unlimited() -> Self {
+        Self {
+            is_unlimited: true,
+            is_unlimited_voice: true,
+            is_unlimited_codebase_indices: true,
+            ..Self::default()
+        }
+    }
+}
+
 #[cfg(test)]
 impl RequestLimitInfo {
     pub fn new_for_test(limit: usize, num_requests_used_since_refresh: usize) -> Self {

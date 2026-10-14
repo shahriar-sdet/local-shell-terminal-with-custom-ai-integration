@@ -21,6 +21,7 @@ use settings::{
 };
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use warp_core::channel::ChannelState;
 use warp_core::execution_mode::AppExecutionMode;
 use warp_core::features::FeatureFlag;
 use warp_errors::report_if_error;
@@ -30,7 +31,6 @@ use warpui::{AppContext, Entity, ModelContext, SingletonEntity, UpdateModel, Wea
 
 use crate::ai::execution_profiles::ExecutionProfilesConfig;
 use crate::ai::request_usage_model::RequestLimitInfo;
-use crate::auth::AuthStateProvider;
 use crate::settings::PrivacySettings;
 use crate::terminal::{CLIAgent, TerminalView};
 use crate::workspaces::user_workspaces::{TeamScope, UserWorkspaces};
@@ -1525,6 +1525,19 @@ define_settings_group!(AISettings, settings: [
         max_table_depth: 2,
         description: "Custom inference endpoint definitions.",
     }
+    // The user's own AI endpoint (LM Studio or OpenAI-compatible) and per-task model settings.
+    // Never synced: it holds the endpoint's credentials and is the only host LocalShell contacts.
+    local_ai: LocalAi {
+        type: local_ai::LocalAiConfig,
+        default: local_ai::LocalAiConfig::default(),
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: false,
+        toml_path: "agents.local_ai",
+        max_table_depth: 2,
+        description: "The AI endpoint, credentials and per-task model settings for LocalShell.",
+    }
     // Which unit the TUI footer's usage entry displays (credits or provider
     // cost), flipped by clicking the entry.
     //
@@ -2263,13 +2276,10 @@ impl AISettings {
     }
 
     pub fn is_any_ai_enabled(&self, app: &AppContext) -> bool {
-        // Disable AI for anonymous and logged-out users.
-        let is_anonymous_or_logged_out = AuthStateProvider::as_ref(app)
-            .get()
-            .is_anonymous_or_logged_out();
-
+        // LocalShell has no accounts: AI becomes available once the user has configured their
+        // own endpoint and model.
         *self.is_any_ai_enabled
-            && !is_anonymous_or_logged_out
+            && self.local_ai.value().is_configured()
             && !self.is_ai_disabled_due_to_remote_session_org_policy(app)
     }
 
@@ -2374,6 +2384,7 @@ impl AISettings {
     pub fn is_voice_input_enabled(&self, app: &warpui::AppContext) -> bool {
         // Voice input is conditionally-compiled because it requires additional dependencies on some platforms.
         cfg!(feature = "voice_input")
+            && !ChannelState::is_local_shell()
             && self.is_any_ai_enabled(app)
             && *self.voice_input_enabled_internal
     }

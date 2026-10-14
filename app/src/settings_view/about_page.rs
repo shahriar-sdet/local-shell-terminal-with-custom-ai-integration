@@ -3,18 +3,37 @@ use warpui::elements::{
     Align, CacheOption, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, Image,
     MainAxisAlignment, MouseStateHandle, ParentElement, Wrap,
 };
-use warpui::ui_components::components::UiComponent;
+use warpui::fonts::Weight;
+use warpui::ui_components::components::{UiComponent, UiComponentStyles};
 use warpui::{AppContext, Entity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::SettingsSection;
 use super::settings_page::{
-    MatchData, PageType, SettingsPageEvent, SettingsPageMeta, SettingsPageViewHandle,
-    SettingsWidget,
+    CONTENT_FONT_SIZE, MatchData, PageType, SettingsPageEvent, SettingsPageMeta,
+    SettingsPageViewHandle, SettingsWidget,
 };
 use crate::appearance::Appearance;
 use crate::channel::ChannelState;
 use crate::themes::theme::ColorScheme;
 use crate::workspace::WorkspaceAction;
+
+/// The AGPL's "Appropriate Legal Notices" (section 0): copyright, the absence of warranty, the
+/// right to redistribute, and where to read the license.
+const LOCAL_SHELL_NOTICES: &[&str] = &[
+    "Based on Warp, © 2020–2026 Denver Technologies, Inc. Modifications © 2026 shahriar-sdet.",
+    "LocalShell is an independent project, not affiliated with or endorsed by Denver \
+     Technologies, Inc. \"Warp\" is a trademark of Denver Technologies, Inc.",
+    "This program is free software: you can redistribute it and/or modify it under the terms of \
+     the GNU Affero General Public License, version 3. Its UI framework (warpui, warpui_core) is \
+     under the MIT license.",
+    "It comes with ABSOLUTELY NO WARRANTY, to the extent permitted by applicable law.",
+    "The license texts (LICENSE-AGPL, LICENSE-MIT) and the notices of the open-source components \
+     it includes (THIRD_PARTY_LICENSES.txt) are in LocalShell.app/Contents/Resources. The AGPL is \
+     also at https://www.gnu.org/licenses/agpl-3.0.html.",
+    "Source code: https://github.com/shahriar-sdet/warp-with-custom-local-ai",
+];
+
+const LOCAL_SHELL_NOTICES_MAX_WIDTH: f32 = 520.;
 
 pub struct AboutPageView {
     page: PageType<Self>,
@@ -54,7 +73,7 @@ impl SettingsWidget for AboutPageWidget {
     type View = AboutPageView;
 
     fn search_terms(&self) -> &str {
-        "about warp version"
+        "about warp localshell version license copyright warranty source"
     }
 
     fn render(
@@ -65,12 +84,6 @@ impl SettingsWidget for AboutPageWidget {
     ) -> Box<dyn Element> {
         let theme = appearance.theme();
         let ui_builder = appearance.ui_builder();
-
-        let image_path = if theme.inferred_color_scheme() == ColorScheme::LightOnDark {
-            "bundled/svg/warp-logo-with-light-title.svg"
-        } else {
-            "bundled/svg/warp-logo-with-dark-title.svg"
-        };
 
         let version = ChannelState::app_version().unwrap_or("v#.##.###");
 
@@ -100,6 +113,16 @@ impl SettingsWidget for AboutPageWidget {
                     .finish(),
             ]);
 
+        if ChannelState::is_local_shell() {
+            return render_local_shell_about(version_row.finish(), appearance);
+        }
+
+        let image_path = if theme.inferred_color_scheme() == ColorScheme::LightOnDark {
+            "bundled/svg/warp-logo-with-light-title.svg"
+        } else {
+            "bundled/svg/warp-logo-with-dark-title.svg"
+        };
+
         Align::new(
             Flex::column()
                 .with_cross_axis_alignment(CrossAxisAlignment::Center)
@@ -127,6 +150,73 @@ impl SettingsWidget for AboutPageWidget {
         )
         .finish()
     }
+}
+
+fn render_local_shell_about(
+    version_row: Box<dyn Element>,
+    appearance: &Appearance,
+) -> Box<dyn Element> {
+    let theme = appearance.theme();
+    let ui_builder = appearance.ui_builder();
+
+    let icon = ConstrainedBox::new(
+        Image::new(
+            AssetSource::Bundled {
+                path: "bundled/svg/localshell-icon.svg",
+            },
+            CacheOption::BySize,
+        )
+        .finish(),
+    )
+    .with_max_height(96.)
+    .with_max_width(96.)
+    .finish();
+
+    let name = ui_builder
+        .span("LocalShell")
+        .with_style(
+            UiComponentStyles::default()
+                .set_font_weight(Weight::Bold)
+                .set_font_size(20.),
+        )
+        .build()
+        .with_margin_top(12.)
+        .finish();
+
+    let notice_style = UiComponentStyles {
+        font_size: Some(CONTENT_FONT_SIZE),
+        font_color: Some(theme.sub_text_color(theme.surface_2()).into_solid()),
+        ..Default::default()
+    };
+    let notices = LOCAL_SHELL_NOTICES.iter().map(|notice| {
+        ui_builder
+            .span(*notice)
+            .with_soft_wrap()
+            .with_selectable(true)
+            .with_style(notice_style)
+            .build()
+            .with_margin_top(10.)
+            .finish()
+    });
+
+    Align::new(
+        Flex::column()
+            .with_cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_child(icon)
+            .with_child(name)
+            .with_child(version_row)
+            .with_child(
+                Container::new(
+                    ConstrainedBox::new(Flex::column().with_children(notices).finish())
+                        .with_max_width(LOCAL_SHELL_NOTICES_MAX_WIDTH)
+                        .finish(),
+                )
+                .with_margin_top(14.)
+                .finish(),
+            )
+            .finish(),
+    )
+    .finish()
 }
 
 impl SettingsPageMeta for AboutPageView {

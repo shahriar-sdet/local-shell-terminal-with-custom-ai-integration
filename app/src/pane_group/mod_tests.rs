@@ -208,6 +208,7 @@ fn initialize_app_with_history(app: &mut App, conversations: Vec<AgentConversati
         AIRequestUsageModel::new_for_test(ServerApiProvider::as_ref(ctx).get_ai_client(), ctx)
     });
     app.add_singleton_model(SessionPermissionsManager::new);
+    app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
     app.add_singleton_model(LLMPreferences::new);
     app.add_singleton_model(HarnessAvailabilityModel::new);
     #[cfg(feature = "voice_input")]

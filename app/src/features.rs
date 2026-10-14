@@ -9,6 +9,14 @@ pub fn init_feature_flags() {
     for flag in enabled_features() {
         flag.set_enabled(true);
     }
+    if ChannelState::is_local_shell() {
+        for flag in LOCALSHELL_DISABLED_FLAGS {
+            flag.set_enabled(false);
+        }
+        for flag in LOCALSHELL_ENABLED_FLAGS {
+            flag.set_enabled(true);
+        }
+    }
     mark_initialized();
 }
 

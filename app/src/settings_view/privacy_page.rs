@@ -228,8 +228,11 @@ impl PrivacyPageView {
         if ContextFlag::NetworkLogConsole.is_enabled() {
             widgets.push(Box::new(NetworkLogWidget::default()));
         }
-        widgets.push(Box::new(DataManagementWidget::default()));
-        widgets.push(Box::new(PrivacyPolicyWidget::default()));
+        // LocalShell has no Warp account to delete, and Warp's privacy policy doesn't describe it.
+        if !ChannelState::is_local_shell() {
+            widgets.push(Box::new(DataManagementWidget::default()));
+            widgets.push(Box::new(PrivacyPolicyWidget::default()));
+        }
         PageType::new_uncategorized(widgets, Some(PageTitle::new("Privacy")))
     }
 

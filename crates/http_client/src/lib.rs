@@ -1,3 +1,5 @@
+#[cfg(not(target_family = "wasm"))]
+mod egress;
 pub mod iap;
 
 use std::future::Future;
@@ -168,6 +170,8 @@ impl Client {
     }
 
     pub fn from_client_builder(client_builder: reqwest::ClientBuilder) -> reqwest::Result<Self> {
+        #[cfg(not(target_family = "wasm"))]
+        let client_builder = egress::guard_client_builder(client_builder);
         client_builder.build().map(|client| Self {
             wrapped: client,
             before_request_sent: None,
@@ -275,9 +279,11 @@ impl Client {
         })
     }
 
+    /// Under a restricted egress policy the only reachable host is the user's AI endpoint, which
+    /// must not receive device metadata (OS name and version, client ID).
     #[cfg(not(target_family = "wasm"))]
     fn include_warp_http_headers<U: IntoUrl + Clone>(_url: U) -> bool {
-        true
+        !egress_guard::is_restricted()
     }
 
     fn add_warp_http_headers(mut builder: RequestBuilder) -> RequestBuilder {
@@ -369,10 +375,13 @@ impl Client {
     /// Core request execution logic shared by all platforms.
     async fn execute_inner(&self, request: Request) -> reqwest::Result<Response> {
         let Request {
-            wrapped: request,
+            wrapped: mut request,
             serialized_payload,
             prevent_sleep_reason,
         } = request;
+
+        #[cfg(not(target_family = "wasm"))]
+        egress::redirect_if_blocked(request.url_mut());
 
         if let Some(before_response_send_fn) = &self.before_request_sent {
             before_response_send_fn(&request, &serialized_payload);
@@ -520,8 +529,7 @@ impl<'a> RequestBuilder<'a> {
                     }
                 };
             } else {
-                let mut stream = self
-                    .wrapped
+                let mut stream = egress::guard_request_builder(self.wrapped)
                     .eventsource()
                     .expect("Request type for SSE endpoint must be cloneable.");
 

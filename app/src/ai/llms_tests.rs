@@ -625,6 +625,7 @@ fn active_models_fall_back_to_usable_choice_or_custom_endpoint_when_default_disa
         app.add_singleton_model(|ctx| {
             AIExecutionProfilesModel::new(&LaunchMode::new_for_unit_test(), ctx)
         });
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         let llm_preferences = app.add_singleton_model(LLMPreferences::new);
 
         let custom_model_id = LLMId::from("custom-config-key");
@@ -755,6 +756,7 @@ fn active_models_use_default_when_usable() {
         app.add_singleton_model(|ctx| {
             AIExecutionProfilesModel::new(&LaunchMode::new_for_unit_test(), ctx)
         });
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         let llm_preferences = app.add_singleton_model(LLMPreferences::new);
 
         let models = ModelsByFeature {
@@ -810,6 +812,7 @@ fn reconcile_preserves_custom_models_saved_on_execution_profile() {
         let profiles_model = app.add_singleton_model(|ctx| {
             AIExecutionProfilesModel::new(&LaunchMode::new_for_unit_test(), ctx)
         });
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         let llm_preferences = app.add_singleton_model(LLMPreferences::new);
 
         let custom_model_id = LLMId::from("custom-model-config-key");
@@ -928,6 +931,7 @@ fn team_catalog_hydration_preserves_shared_profile_and_resolves_against_active_t
         let profiles_model = app.add_singleton_model(|ctx| {
             AIExecutionProfilesModel::new(&LaunchMode::new_for_unit_test(), ctx)
         });
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         let llm_preferences = app.add_singleton_model(LLMPreferences::new);
         let profile_id = profiles_model.read(&app, |profiles, _| profiles.default_profile_id());
         profiles_model.update(&mut app, |profiles, ctx| {
@@ -994,6 +998,7 @@ fn reconcile_clears_unavailable_base_model_preference() {
         let profiles_model = app.add_singleton_model(|ctx| {
             AIExecutionProfilesModel::new(&LaunchMode::new_for_unit_test(), ctx)
         });
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         let llm_preferences = app.add_singleton_model(LLMPreferences::new);
         let profile_id = profiles_model.read(&app, |profiles, _| profiles.default_profile_id());
         let unavailable_model_id = LLMId::from("unavailable-model");
@@ -1045,6 +1050,7 @@ fn reconcile_clears_requires_upgrade_base_model_preference_without_byok() {
         let profiles_model = app.add_singleton_model(|ctx| {
             AIExecutionProfilesModel::new(&LaunchMode::new_for_unit_test(), ctx)
         });
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         let llm_preferences = app.add_singleton_model(LLMPreferences::new);
         let profile_id = profiles_model.read(&app, |profiles, _| profiles.default_profile_id());
 
@@ -1109,6 +1115,7 @@ fn reconcile_preserves_custom_endpoint_models_not_configured_locally() {
         let profiles_model = app.add_singleton_model(|ctx| {
             AIExecutionProfilesModel::new(&LaunchMode::new_for_unit_test(), ctx)
         });
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         let llm_preferences = app.add_singleton_model(LLMPreferences::new);
 
         // Simulate a model ID from a custom endpoint on another device.
@@ -1208,6 +1215,7 @@ fn reconcile_preserves_custom_router_models_not_configured_locally() {
         let profiles_model = app.add_singleton_model(|ctx| {
             AIExecutionProfilesModel::new(&LaunchMode::new_for_unit_test(), ctx)
         });
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         let llm_preferences = app.add_singleton_model(LLMPreferences::new);
 
         // Simulate a local custom-router id from another device.

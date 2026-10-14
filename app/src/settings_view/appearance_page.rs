@@ -1361,7 +1361,10 @@ impl AppearanceSettingsPageView {
             ],
         )];
 
-        if AppIconSettings::as_ref(ctx).is_supported_on_current_platform() {
+        // LocalShell doesn't ship the alternate icons: they are Warp's artwork.
+        if AppIconSettings::as_ref(ctx).is_supported_on_current_platform()
+            && !ChannelState::is_local_shell()
+        {
             categories.push(Category::new(
                 "Icon",
                 vec![Box::new(CustomAppIconWidget::default())],

@@ -103,6 +103,12 @@ struct ParentTracingContext {
 /// is installed so tracing instrumentation remains safe without producing output or partially
 /// initializing export.
 pub fn init() -> anyhow::Result<Initialization> {
+    // The exporter's HTTP client is outside the process egress policy, so restricted builds
+    // never export.
+    if egress_guard::is_restricted() {
+        install_no_subscriber()?;
+        return Ok(Initialization::default());
+    }
     let Some(base_endpoint) = std::env::var(CLOUD_AGENT_OTLP_ENDPOINT)
         .ok()
         .filter(|endpoint| !endpoint.trim().is_empty())
@@ -136,7 +142,7 @@ pub(super) fn child_process_snapshot() -> Option<ChildProcessTracingConfig> {
 pub(super) fn init_child_process(
     config: Option<ChildProcessTracingConfig>,
 ) -> anyhow::Result<(Initialization, OtelContext)> {
-    if let Some(config) = config {
+    if let Some(config) = config.filter(|_| !egress_guard::is_restricted()) {
         let parent_context = config.parent_context();
         if let Ok(auth_context) = AuthContext::from_snapshot(config.credential) {
             return init_exporter(&config.endpoint, &auth_context)

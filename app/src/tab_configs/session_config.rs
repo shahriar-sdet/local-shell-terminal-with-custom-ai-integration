@@ -9,6 +9,7 @@ use super::tab_config::{
     TabConfigParam, TabConfigParamType, generated_worktree_path_string,
 };
 use crate::app_state::{BranchSnapshot, LeafContents, LeafSnapshot, PaneNodeSnapshot};
+use crate::channel::ChannelState;
 use crate::launch_configs::launch_config::SplitDirection;
 use crate::terminal::cli_agent::CLIAgent;
 use crate::themes::theme::AnsiColorIdentifier;
@@ -48,7 +49,7 @@ impl SessionType {
     pub(crate) fn pill_label(&self) -> &'static str {
         match self {
             SessionType::Terminal => "Terminal",
-            SessionType::Oz => "Warp Agent",
+            SessionType::Oz => ChannelState::agent_name(),
             SessionType::CliAgent(CLIAgent::Claude) => "Claude",
             SessionType::CliAgent(CLIAgent::Codex) => "Codex",
             SessionType::CliAgent(CLIAgent::Gemini) => "Gemini",

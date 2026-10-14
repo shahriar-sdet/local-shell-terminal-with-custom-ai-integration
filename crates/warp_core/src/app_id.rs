@@ -25,11 +25,12 @@ impl AppId {
         }
     }
 
-    /// Parses an three-component app identifier string (e.g.: com.example.App)
-    /// into an [`AppId`].
+    /// Parses an app identifier string (e.g.: com.example.App) into an [`AppId`]. The last two
+    /// components are the organization and application name; anything before them is the
+    /// qualifier, so reverse-DNS qualifiers such as `io.github` are supported.
     pub fn parse(app_id: &str) -> anyhow::Result<Self> {
-        let &[qualifier, organization, application_name] =
-            app_id.splitn(4, '.').collect_vec().as_slice()
+        let &[application_name, organization, qualifier] =
+            app_id.rsplitn(3, '.').collect_vec().as_slice()
         else {
             anyhow::bail!("App ID does not contain three components, separated by periods.");
         };

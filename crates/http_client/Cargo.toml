@@ -14,6 +14,7 @@ async-compat.workspace = true
 async-stream.workspace = true
 bytes.workspace = true
 cfg-if.workspace = true
+egress_guard.workspace = true
 futures.workspace = true
 http.workspace = true
 log.workspace = true
@@ -29,6 +30,8 @@ warp_core.workspace = true
 warp_errors.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { workspace = true, features = ["net"] }
+url.workspace = true
 # Used to read the current OTEL span context and inject it as a trace-link
 # header on cloud-agent requests. Native-only so the wasm build is unaffected.
 opentelemetry.workspace = true

@@ -1091,7 +1091,7 @@ pub fn init(app: &mut AppContext) {
     app.register_editable_bindings([
         EditableBinding::new(
             "workspace:terminate_app",
-            "Quit Warp",
+            format!("Quit {}", ChannelState::app_name()),
             WorkspaceAction::TerminateApp,
         )
         .with_context_predicate(id!("Workspace"))
@@ -1596,8 +1596,10 @@ fn add_open_setting_pages_as_editable_binding(app: &mut AppContext) {
         .with_custom_action(CustomAction::ConfigureKeybindings),
         EditableBinding::new(
             "workspace:show_settings_about_page",
-            BindingDescription::new("Open Settings: About")
-                .with_custom_description(bindings::MAC_MENUS_CONTEXT, "About Warp"),
+            BindingDescription::new("Open Settings: About").with_custom_description(
+                bindings::MAC_MENUS_CONTEXT,
+                format!("About {}", ChannelState::app_name()),
+            ),
             WorkspaceAction::ShowSettingsPage(SettingsSection::About),
         )
         .with_group(bindings::BindingGroup::Settings.as_str())
@@ -1631,6 +1633,14 @@ fn add_open_setting_pages_as_editable_binding(app: &mut AppContext) {
             "workspace:show_ai_settings_page",
             BindingDescription::new("Open Settings: AI"),
             WorkspaceAction::ShowSettingsPage(SettingsSection::WarpAgent),
+        )
+        .with_enabled(|| FeatureFlag::AgentMode.is_enabled())
+        .with_group(bindings::BindingGroup::Settings.as_str())
+        .with_context_predicate(id!("Workspace")),
+        EditableBinding::new(
+            "workspace:show_ai_provider_settings_page",
+            BindingDescription::new("Open Settings: AI provider"),
+            WorkspaceAction::ShowSettingsPage(SettingsSection::LocalAi),
         )
         .with_enabled(|| FeatureFlag::AgentMode.is_enabled())
         .with_group(bindings::BindingGroup::Settings.as_str())
@@ -1714,17 +1724,20 @@ fn add_overflow_menu_items_as_editable_binding(app: &mut AppContext) {
         #[cfg(not(target_family = "wasm"))]
         EditableBinding::new(
             "workspace:view_logs",
-            "View Warp logs",
+            format!("View {} logs", ChannelState::app_name()),
             WorkspaceAction::ViewLogs,
         )
         .with_context_predicate(id!("Workspace")),
-        EditableBinding::new(
+    ]);
+
+    if !ChannelState::is_local_shell() {
+        app.register_editable_bindings([EditableBinding::new(
             "workspace:link_to_privacy_policy",
             "View privacy policy (opens external link)",
             WorkspaceAction::ViewPrivacyPolicy,
         )
-        .with_context_predicate(id!("Workspace")),
-    ]);
+        .with_context_predicate(id!("Workspace"))]);
+    }
 }
 
 #[derive(PartialEq, Copy, Clone, Debug)]

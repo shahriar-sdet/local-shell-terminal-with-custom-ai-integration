@@ -16,10 +16,10 @@ use chrono::{DateTime, Utc};
 use cloud_object_models::CodeForge;
 use cynic::{MutationBuilder, QueryBuilder};
 use itertools::Itertools;
+use local_ai::{ChatMessage, TaskKind};
 #[cfg(test)]
 use mockall::automock;
 use prost::Message;
-use warp_core::channel::ChannelState;
 use warp_core::features::FeatureFlag;
 use warp_errors::report_error;
 use warp_graphql::ai::{AgentTaskState, PlatformErrorCode};
@@ -46,19 +46,6 @@ use warp_graphql::mutations::disconnect_chatgpt::{
 use warp_graphql::mutations::generate_code_embeddings::{
     GenerateCodeEmbeddings, GenerateCodeEmbeddingsInput, GenerateCodeEmbeddingsResult,
     GenerateCodeEmbeddingsVariables,
-};
-use warp_graphql::mutations::generate_commands::{
-    GenerateCommands, GenerateCommandsInput, GenerateCommandsResult, GenerateCommandsStatus,
-    GenerateCommandsVariables,
-};
-use warp_graphql::mutations::generate_dialogue::{
-    GenerateDialogue, GenerateDialogueInput,
-    GenerateDialogueResult as GenerateDialogueResultGraphql, GenerateDialogueStatus,
-    GenerateDialogueVariables, TranscriptPart as TranscriptPartGraphql,
-};
-use warp_graphql::mutations::generate_metadata_for_command::{
-    GenerateMetadataForCommand, GenerateMetadataForCommandInput, GenerateMetadataForCommandResult,
-    GenerateMetadataForCommandStatus, GenerateMetadataForCommandVariables,
 };
 use warp_graphql::mutations::populate_merkle_tree_cache::{
     PopulateMerkleTreeCache, PopulateMerkleTreeCacheResult, PopulateMerkleTreeCacheVariables,
@@ -91,10 +78,6 @@ use warp_graphql::queries::free_available_models::{
     FreeAvailableModels, FreeAvailableModelsInput, FreeAvailableModelsResult,
     FreeAvailableModelsVariables,
 };
-#[cfg(not(feature = "agent_mode_evals"))]
-use warp_graphql::queries::get_ai_credit_availability::{
-    GetAICreditAvailability, GetAICreditAvailabilityVariables,
-};
 use warp_graphql::queries::get_available_harnesses::{
     GetAvailableHarnesses, GetAvailableHarnessesVariables,
 };
@@ -109,10 +92,6 @@ use warp_graphql::queries::get_feature_model_choices::{
 };
 use warp_graphql::queries::get_relevant_fragments::{
     GetRelevantFragmentsQuery, GetRelevantFragmentsResult, GetRelevantFragmentsVariables,
-};
-#[cfg(not(feature = "agent_mode_evals"))]
-use warp_graphql::queries::get_request_limit_info::{
-    GetRequestLimitInfo, GetRequestLimitInfoVariables,
 };
 use warp_graphql::queries::get_scheduled_agent_history::{
     GetScheduledAgentHistory, GetScheduledAgentHistoryVariables, ScheduledAgentHistory,
@@ -144,8 +123,6 @@ use super::ServerApi;
 #[cfg(not(target_family = "wasm"))]
 use super::download::write_response_body_to_path;
 use super::harness_support::{UploadField, UploadFieldValue, UploadTarget};
-#[cfg(not(feature = "agent_mode_evals"))]
-use crate::ai::BonusGrant;
 pub use crate::ai::agent::UserQueryMode;
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::{
@@ -168,7 +145,7 @@ use crate::ai::llms::{
     AvailableLLMs, DisableReason, LLMContextWindow, LLMInfo, LLMModelHost, LLMSpec,
     LLMUsageMetadata, ModelsByFeature, RoutingHostConfig,
 };
-#[cfg(feature = "agent_mode_evals")]
+use crate::ai::local_generation;
 use crate::ai::request_usage_model::RequestLimitInfo;
 use crate::ai::{AICreditAvailability, RequestUsageInfo};
 use crate::ai_assistant::execution_context::WarpAiExecutionContext;
@@ -180,13 +157,6 @@ use crate::persistence::model::ConversationUsageMetadata;
 use crate::server::graphql::{get_request_context, get_user_facing_error_message};
 use crate::server::team_scope::RequestTeamScope;
 use crate::terminal::model::block::SerializedBlock;
-#[cfg(not(feature = "agent_mode_evals"))]
-use crate::{
-    server::ids::ServerId,
-    workspaces::{gql_convert::PLACEHOLDER_WORKSPACE_UID, workspace::WorkspaceUid},
-};
-
-const AI_ASSISTANT_REQUEST_TIMEOUT_SECONDS: u64 = 30;
 
 #[cfg(not(target_family = "wasm"))]
 pub(crate) struct ExecutionBootstrapData {
@@ -2015,221 +1985,75 @@ impl AIClient for ServerApi {
     async fn generate_commands_from_natural_language(
         &self,
         prompt: String,
-        // TODO: use relevant context from RequestContext and deprecate usage of ai_execution_context
-        _ai_execution_context: Option<WarpAiExecutionContext>,
+        ai_execution_context: Option<WarpAiExecutionContext>,
     ) -> Result<Vec<AIGeneratedCommand>, GenerateCommandsFromNaturalLanguageError> {
-        let default_err = GenerateCommandsFromNaturalLanguageError::Other;
-
-        let variables = GenerateCommandsVariables {
-            input: GenerateCommandsInput { prompt },
-            request_context: get_request_context(),
-        };
-
-        let operation = GenerateCommands::build(variables);
-        let response = self
-            .send_graphql_request(
-                operation,
-                Some(Duration::from_secs(AI_ASSISTANT_REQUEST_TIMEOUT_SECONDS)),
-            )
+        let generated = local_generation::generate_commands(prompt, ai_execution_context)
             .await
-            .map_err(|_| default_err)?;
-
-        match response.generate_commands {
-            GenerateCommandsResult::GenerateCommandsOutput(output) => match output.status {
-                GenerateCommandsStatus::GenerateCommandsSuccess(success) => {
-                    Ok(success.commands.into_iter().map(Into::into).collect_vec())
-                }
-                GenerateCommandsStatus::GenerateCommandsFailure(failure) => {
-                    Err(failure.type_.into())
-                }
-                GenerateCommandsStatus::Unknown => {
-                    Err(GenerateCommandsFromNaturalLanguageError::Other)
-                }
-            },
-            _ => Err(GenerateCommandsFromNaturalLanguageError::Other),
+            .map_err(|error| {
+                log::warn!("Command generation failed: {error}");
+                GenerateCommandsFromNaturalLanguageError::AiProviderError
+            })?;
+        if generated.commands.is_empty() {
+            return Err(GenerateCommandsFromNaturalLanguageError::BadPrompt);
         }
+        Ok(generated.commands.into_iter().map(Into::into).collect_vec())
     }
 
     async fn generate_dialogue_answer(
         &self,
         transcript: Vec<TranscriptPart>,
         prompt: String,
-        // TODO: use relevant context from RequestContext and deprecate usage of ai_execution_context
-        _ai_execution_context: Option<WarpAiExecutionContext>,
+        ai_execution_context: Option<WarpAiExecutionContext>,
     ) -> anyhow::Result<GenerateDialogueResult> {
-        let graphql_transcript: Vec<TranscriptPartGraphql> = transcript
-            .into_iter()
-            .map(|part| TranscriptPartGraphql {
-                user: part.raw_user_prompt().to_string(),
-                assistant: part.raw_assistant_answer().to_string(),
-            })
-            .collect();
-        let variables = GenerateDialogueVariables {
-            input: GenerateDialogueInput {
-                transcript: graphql_transcript,
-                prompt,
-            },
-            request_context: get_request_context(),
-        };
-
-        let operation = GenerateDialogue::build(variables);
-        let response = self
-            .send_graphql_request(
-                operation,
-                Some(Duration::from_secs(AI_ASSISTANT_REQUEST_TIMEOUT_SECONDS)),
-            )
-            .await?;
-        match response.generate_dialogue {
-            GenerateDialogueResultGraphql::GenerateDialogueOutput(output) => match output.status {
-                GenerateDialogueStatus::GenerateDialogueSuccess(success) => {
-                    Ok(GenerateDialogueResult::Success {
-                        answer: success.answer,
-                        truncated: success.truncated,
-                        request_limit_info: success.request_limit_info.into(),
-                        transcript_summarized: success.transcript_summarized,
-                    })
-                }
-                GenerateDialogueStatus::GenerateDialogueFailure(failure) => {
-                    Ok(GenerateDialogueResult::Failure {
-                        request_limit_info: failure.request_limit_info.into(),
-                    })
-                }
-                GenerateDialogueStatus::Unknown => Err(anyhow!("failed to generate AI dialogue")),
-            },
-            GenerateDialogueResultGraphql::UserFacingError(e) => {
-                Err(anyhow!(get_user_facing_error_message(e)))
-            }
-            GenerateDialogueResultGraphql::Unknown => {
-                Err(anyhow!("failed to generate AI dialogue"))
-            }
+        let system = format!(
+            "You are Warp AI, an assistant inside the user's terminal. {} Answer questions \
+             about commands, errors and programming concisely in Markdown, with commands in \
+             fenced code blocks.",
+            local_generation::environment_line(ai_execution_context.as_ref())
+        );
+        let mut messages = Vec::new();
+        for part in &transcript {
+            messages.push(ChatMessage::user(part.raw_user_prompt()));
+            messages.push(ChatMessage::assistant(part.raw_assistant_answer()));
         }
+        messages.push(ChatMessage::user(prompt));
+        let answer =
+            local_generation::complete(TaskKind::CommandGeneration, &system, messages).await?;
+        Ok(GenerateDialogueResult::Success {
+            answer,
+            truncated: false,
+            request_limit_info: RequestLimitInfo::unlimited(),
+            transcript_summarized: false,
+        })
     }
 
     async fn generate_metadata_for_command(
         &self,
         command: String,
     ) -> Result<GeneratedCommandMetadata, GeneratedCommandMetadataError> {
-        let default_err = GeneratedCommandMetadataError::Other;
-        let variables = GenerateMetadataForCommandVariables {
-            input: GenerateMetadataForCommandInput { command },
-            request_context: get_request_context(),
-        };
-
-        let operation = GenerateMetadataForCommand::build(variables);
-        let response = self
-            .send_graphql_request(
-                operation,
-                Some(Duration::from_secs(AI_ASSISTANT_REQUEST_TIMEOUT_SECONDS)),
-            )
+        let metadata = local_generation::generate_command_metadata(command)
             .await
-            .map_err(|_| default_err)?;
-
-        match response.generate_metadata_for_command {
-            GenerateMetadataForCommandResult::GenerateMetadataForCommandOutput(output) => {
-                match output.status {
-                    GenerateMetadataForCommandStatus::GenerateMetadataForCommandSuccess(
-                        success,
-                    ) => Ok(success.into()),
-                    GenerateMetadataForCommandStatus::GenerateMetadataForCommandFailure(
-                        failure,
-                    ) => Err(failure.type_.into()),
-                    GenerateMetadataForCommandStatus::Unknown => {
-                        Err(GeneratedCommandMetadataError::Other)
-                    }
-                }
-            }
-            _ => Err(GeneratedCommandMetadataError::Other),
+            .map_err(|error| {
+                log::warn!("Workflow metadata generation failed: {error}");
+                GeneratedCommandMetadataError::AiProviderError
+            })?;
+        if metadata.command.trim().is_empty() {
+            return Err(GeneratedCommandMetadataError::BadCommand);
         }
+        Ok(metadata.into())
     }
 
-    #[cfg(feature = "agent_mode_evals")]
     async fn get_request_limit_info(&self) -> Result<RequestUsageInfo, anyhow::Error> {
         Ok(RequestUsageInfo {
-            request_limit_info: RequestLimitInfo::new_for_evals(),
+            request_limit_info: RequestLimitInfo::unlimited(),
             bonus_grants: vec![],
         })
     }
 
-    #[cfg(not(feature = "agent_mode_evals"))]
-    async fn get_request_limit_info(&self) -> Result<RequestUsageInfo, anyhow::Error> {
-        let variables = GetRequestLimitInfoVariables {
-            request_context: get_request_context(),
-        };
-        let operation = GetRequestLimitInfo::build(variables);
-        let response = self.send_graphql_request(operation, None).await?;
-
-        match response.user {
-            warp_graphql::queries::get_request_limit_info::UserResult::UserOutput(user_output) => {
-                let request_limit_info = user_output.user.request_limit_info.into();
-
-                let workspace_and_team_bonus_grants = user_output
-                    .user
-                    .workspaces
-                    .into_iter()
-                    .filter(|workspace| workspace.uid != PLACEHOLDER_WORKSPACE_UID.into())
-                    .flat_map(|workspace| {
-                        let workspace_uid =
-                            WorkspaceUid::from(ServerId::from_string_lossy(workspace.uid.inner()));
-                        workspace
-                            .bonus_grants_info
-                            .grants
-                            .into_iter()
-                            .map(move |grant| {
-                                BonusGrant::from_gql_workspace_or_team_bonus_grant(
-                                    grant,
-                                    workspace_uid,
-                                )
-                            })
-                    });
-
-                let bonus_grants: Vec<BonusGrant> = user_output
-                    .user
-                    .bonus_grants
-                    .into_iter()
-                    .map(BonusGrant::from_gql_user_bonus_grant)
-                    .chain(workspace_and_team_bonus_grants)
-                    .collect();
-
-                Ok(RequestUsageInfo {
-                    request_limit_info,
-                    bonus_grants,
-                })
-            }
-            warp_graphql::queries::get_request_limit_info::UserResult::UserFacingError(e) => {
-                Err(anyhow!(get_user_facing_error_message(e)))
-            }
-            warp_graphql::queries::get_request_limit_info::UserResult::Unknown => {
-                Err(anyhow!("failed to get request limit info"))
-            }
-        }
-    }
-
-    #[cfg(feature = "agent_mode_evals")]
     async fn get_ai_credit_availability(&self) -> Result<AICreditAvailability, anyhow::Error> {
         Ok(AICreditAvailability::available_with_source(Some(
             crate::ai::AICreditSource::BaseLimit,
         )))
-    }
-
-    #[cfg(not(feature = "agent_mode_evals"))]
-    async fn get_ai_credit_availability(&self) -> Result<AICreditAvailability, anyhow::Error> {
-        let variables = GetAICreditAvailabilityVariables {
-            request_context: get_request_context(),
-        };
-        let operation = GetAICreditAvailability::build(variables);
-        let response = self.send_graphql_request(operation, None).await?;
-
-        match response.user {
-            warp_graphql::queries::get_ai_credit_availability::UserResult::UserOutput(output) => {
-                Ok(output.user.ai_credit_availability.into())
-            }
-            warp_graphql::queries::get_ai_credit_availability::UserResult::UserFacingError(e) => {
-                Err(anyhow!(get_user_facing_error_message(e)))
-            }
-            warp_graphql::queries::get_ai_credit_availability::UserResult::Unknown => {
-                Err(anyhow!("failed to get AI credit availability"))
-            }
-        }
     }
 
     async fn get_chatgpt_connection(&self) -> Result<ChatGPTConnectionStatus, anyhow::Error> {
@@ -3523,23 +3347,8 @@ impl AIClient for ServerApi {
         &self,
         request: GenerateCodeReviewContentRequest,
     ) -> Result<GenerateCodeReviewContentResponse, anyhow::Error> {
-        let auth_token = self.get_or_refresh_access_token().await?;
-        let request_builder = self.base_client.http_client().post(format!(
-            "{}/ai/generate_code_review_content",
-            ChannelState::server_root_url()
-        ));
-        let response = if let Some(token) = auth_token.as_bearer_token() {
-            request_builder.bearer_auth(token)
-        } else {
-            request_builder
-        }
-        .json(&request)
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
-        Ok(response)
+        let content = local_generation::code_review_content(&request).await?;
+        Ok(GenerateCodeReviewContentResponse { content })
     }
 }
 

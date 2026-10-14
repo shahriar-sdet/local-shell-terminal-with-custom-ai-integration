@@ -42,6 +42,7 @@ cloud_object_client = { path = "crates/cloud_object_client" }
 cloud_object_persistence = { path = "crates/cloud_object_persistence" }
 cloud_object_models = { path = "crates/cloud_object_models" }
 computer_use = { path = "crates/computer_use" }
+egress_guard = { path = "crates/egress_guard" }
 field_mask = { path = "crates/field_mask" }
 firebase = { path = "crates/firebase" }
 fuzzy_match = { path = "crates/fuzzy_match" }
@@ -54,6 +55,8 @@ ipc = { path = "crates/ipc" }
 ipynb_parser = { path = "crates/ipynb_parser" }
 jsonrpc = { path = "crates/jsonrpc" }
 languages = { path = "crates/languages" }
+local_agent = { path = "crates/local_agent" }
+local_ai = { path = "crates/local_ai" }
 local_control = { path = "crates/local_control" }
 lsp = { path = "crates/lsp" }
 markdown_parser = { path = "crates/markdown_parser" }

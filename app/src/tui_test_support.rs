@@ -374,6 +374,7 @@ pub fn register_tui_session_view_test_singletons(app: &mut warpui::App) {
     app.add_singleton_model(|_| crate::appearance::Appearance::mock());
 
     app.add_singleton_model(|_| TemplatableMCPServerManager::default());
+    app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
     app.add_singleton_model(LLMPreferences::new);
     app.add_singleton_model(HarnessAvailabilityModel::new);
     app.add_singleton_model(ConnectedSelfHostedWorkersModel::new);

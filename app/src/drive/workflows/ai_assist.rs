@@ -31,6 +31,25 @@ pub struct GeneratedArgument {
     pub default_value: String,
 }
 
+impl From<crate::ai::local_generation::GeneratedMetadata> for GeneratedCommandMetadata {
+    fn from(value: crate::ai::local_generation::GeneratedMetadata) -> Self {
+        GeneratedCommandMetadata {
+            command: value.command,
+            title: value.title,
+            description: value.description,
+            arguments: value
+                .arguments
+                .into_iter()
+                .map(|argument| GeneratedArgument {
+                    name: argument.name,
+                    description: argument.description,
+                    default_value: argument.default_value,
+                })
+                .collect(),
+        }
+    }
+}
+
 impl From<GenerateMetadataForCommandSuccess> for GeneratedCommandMetadata {
     fn from(value: GenerateMetadataForCommandSuccess) -> Self {
         GeneratedCommandMetadata {

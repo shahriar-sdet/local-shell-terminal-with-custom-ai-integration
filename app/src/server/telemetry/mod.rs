@@ -95,6 +95,10 @@ impl TelemetryApi {
     pub async fn flush_events(&self, settings_snapshot: PrivacySettingsSnapshot) -> Result<usize> {
         let events = warpui::telemetry::flush_events();
         let event_count = events.len();
+        // Builds without a telemetry destination (LocalShell) drop events without storing them.
+        if !ChannelState::is_telemetry_available() {
+            return Ok(event_count);
+        }
 
         #[cfg(not(target_family = "wasm"))]
         if FeatureFlag::SendTelemetryToFile.is_enabled() {
@@ -122,6 +126,9 @@ impl TelemetryApi {
         path: &Path,
         settings_snapshot: PrivacySettingsSnapshot,
     ) -> Result<()> {
+        if !ChannelState::is_telemetry_available() {
+            return Ok(());
+        }
         if path.exists() {
             let file = File::open(path)?;
             let events: Vec<RudderBatchMessage> = serde_json::from_reader(file)?;
@@ -150,6 +157,10 @@ impl TelemetryApi {
         max_event_count: usize,
         settings_snapshot: PrivacySettingsSnapshot,
     ) -> Result<()> {
+        if !ChannelState::is_telemetry_available() {
+            warpui::telemetry::flush_events();
+            return Ok(());
+        }
         self.flush_and_persist_events_at_path(
             max_event_count,
             settings_snapshot,

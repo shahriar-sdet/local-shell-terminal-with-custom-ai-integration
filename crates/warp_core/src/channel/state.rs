@@ -81,6 +81,31 @@ impl ChannelState {
         *CHANNEL_STATE.lock() = state;
     }
 
+    /// Whether this is LocalShell: the OSS build with every Warp service and third-party
+    /// integration removed, whose only network peer is the user's own AI endpoint.
+    pub fn is_local_shell() -> bool {
+        Self::channel() == Channel::Oss
+    }
+
+    /// The product name used wherever the app names itself, such as menus and the command palette.
+    pub fn app_name() -> &'static str {
+        if Self::is_local_shell() {
+            "LocalShell"
+        } else {
+            "Warp"
+        }
+    }
+
+    /// The name of the built-in AI agent. LocalShell's agent runs on the user's own model, so it
+    /// isn't presented as Warp's.
+    pub fn agent_name() -> &'static str {
+        if Self::is_local_shell() {
+            "Agent"
+        } else {
+            "Warp Agent"
+        }
+    }
+
     pub fn is_release_bundle() -> bool {
         cfg!(feature = "release_bundle")
     }
@@ -398,7 +423,7 @@ impl ChannelState {
             // Dummy value--integration tests shouldn't support URL schemes.
             Channel::Integration => "warpintegration",
             Channel::Local => "warplocal",
-            Channel::Oss => "warposs",
+            Channel::Oss => "localshell",
         }
     }
 }

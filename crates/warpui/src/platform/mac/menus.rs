@@ -8,7 +8,7 @@ use cocoa::base::{id, nil};
 use lazy_static::lazy_static;
 use objc2::rc::{Retained, autoreleasepool};
 use objc2::runtime::Sel;
-use objc2::{MainThreadMarker, sel};
+use objc2::{MainThreadMarker, Message, sel};
 use objc2_app_kit::{
     NSApplication, NSControlStateValue, NSDownArrowFunctionKey, NSEndFunctionKey,
     NSEventModifierFlags, NSF1FunctionKey, NSF2FunctionKey, NSF3FunctionKey, NSF4FunctionKey,
@@ -17,7 +17,7 @@ use objc2_app_kit::{
     NSF15FunctionKey, NSF16FunctionKey, NSF17FunctionKey, NSF18FunctionKey, NSF19FunctionKey,
     NSF20FunctionKey, NSHomeFunctionKey, NSInsertFunctionKey, NSLeftArrowFunctionKey, NSMenu,
     NSMenuItem, NSPageDownFunctionKey, NSPageUpFunctionKey, NSRightArrowFunctionKey,
-    NSUpArrowFunctionKey,
+    NSRunningApplication, NSUpArrowFunctionKey,
 };
 use objc2_foundation::{NSInteger, NSString, ns_string};
 use warpui_core::actions::StandardAction;
@@ -164,7 +164,7 @@ unsafe extern "C" {
 
 struct StandardMenuItemProperties {
     /// The menu item title.
-    title: &'static NSString,
+    title: Retained<NSString>,
     /// The selector to invoke.
     action: Sel,
     /// The key equivalent string, or empty for none.
@@ -186,6 +186,13 @@ impl KeyEquivalent {
     }
 }
 
+/// The app's name as macOS shows it, which comes from the bundle's Info.plist.
+fn app_name() -> String {
+    NSRunningApplication::currentApplication()
+        .localizedName()
+        .map_or_else(|| "Warp".to_owned(), |name| name.to_string())
+}
+
 // Get properties from a standard action.
 fn resolve_standard_action(action: StandardAction) -> StandardMenuItemProperties {
     let cmd = NSEventModifierFlags::Command;
@@ -194,13 +201,13 @@ fn resolve_standard_action(action: StandardAction) -> StandardMenuItemProperties
     let none = NSEventModifierFlags::empty();
 
     fn make(
-        title: &'static NSString,
+        title: &NSString,
         action: Sel,
         modifiers: NSEventModifierFlags,
         shortcut: &'static NSString,
     ) -> StandardMenuItemProperties {
         StandardMenuItemProperties {
-            title,
+            title: title.retain(),
             action,
             shortcut,
             modifiers,
@@ -215,12 +222,17 @@ fn resolve_standard_action(action: StandardAction) -> StandardMenuItemProperties
             ns_string!(""),
         ),
         StandardAction::Quit => make(
-            ns_string!("Quit Warp"),
+            &NSString::from_str(&format!("Quit {}", app_name())),
             sel!(terminate:),
             cmd,
             ns_string!("q"),
         ),
-        StandardAction::Hide => make(ns_string!("Hide Warp"), sel!(hide:), cmd, ns_string!("h")),
+        StandardAction::Hide => make(
+            &NSString::from_str(&format!("Hide {}", app_name())),
+            sel!(hide:),
+            cmd,
+            ns_string!("h"),
+        ),
         StandardAction::HideOtherApps => make(
             ns_string!("Hide Others"),
             sel!(hideOtherApplications:),
@@ -356,7 +368,7 @@ unsafe fn make_menu_item(menu_item: MenuItem) -> id {
                 let properties = resolve_standard_action(standard_action);
                 let nsmenu_item = NSMenuItem::initWithTitle_action_keyEquivalent(
                     mtm.alloc(),
-                    properties.title,
+                    &properties.title,
                     Some(properties.action),
                     properties.shortcut,
                 );

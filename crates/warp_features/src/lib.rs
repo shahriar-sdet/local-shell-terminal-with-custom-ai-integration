@@ -1108,6 +1108,145 @@ pub const RELEASE_FLAGS: &[FeatureFlag] = &[
     FeatureFlag::DragTabsToWindows,
 ];
 
+/// Features that depend on Warp's servers, its cloud agents, telemetry, or third-party services.
+/// LocalShell turns them off regardless of what the build or channel enables, because it must
+/// never contact any host other than the user's own AI endpoint.
+pub const LOCALSHELL_DISABLED_FLAGS: &[FeatureFlag] = &[
+    // Telemetry, crash reporting and updates.
+    FeatureFlag::Changelog,
+    FeatureFlag::CocoaSentry,
+    FeatureFlag::CrashReporting,
+    FeatureFlag::Autoupdate,
+    FeatureFlag::LogExpensiveFramesInSentry,
+    FeatureFlag::WithSandboxTelemetry,
+    FeatureFlag::RecordAppActiveEvents,
+    FeatureFlag::AgentModeAnalytics,
+    FeatureFlag::GlobalAIAnalyticsBanner,
+    FeatureFlag::GlobalAIAnalyticsCollection,
+    FeatureFlag::FetchChannelVersionsFromWarpServer,
+    FeatureFlag::OzChangelogUpdates,
+    // Accounts, billing and onboarding into Warp's cloud.
+    FeatureFlag::ForceLogin,
+    FeatureFlag::AgentOnboarding,
+    FeatureFlag::AccountFirstOnboarding,
+    FeatureFlag::AIGeneratedOnboardingSuggestions,
+    FeatureFlag::UsageBasedPricing,
+    FeatureFlag::BillingAndUsagePageV2,
+    FeatureFlag::BuildPlanAutoReloadBannerToggle,
+    FeatureFlag::BuildPlanAutoReloadPostPurchaseModal,
+    FeatureFlag::SuperGrok,
+    FeatureFlag::ChatGPTSubscription,
+    FeatureFlag::GeminiEnterprise,
+    FeatureFlag::APIKeyManagement,
+    FeatureFlag::SoloUserByok,
+    FeatureFlag::TeamApiKeys,
+    FeatureFlag::CustomModelRouters,
+    // Warp Drive sync and sharing.
+    FeatureFlag::CloudObjects,
+    FeatureFlag::SharedWithMe,
+    FeatureFlag::DriveObjectsAsContext,
+    FeatureFlag::CloudConversations,
+    FeatureFlag::ConversationApi,
+    // Session sharing.
+    FeatureFlag::CreatingSharedSessions,
+    FeatureFlag::ViewingSharedSessions,
+    FeatureFlag::SharedSessionWriteToLongRunningCommands,
+    FeatureFlag::SessionSharingAcls,
+    FeatureFlag::AgentSharedSessions,
+    FeatureFlag::AvatarInTabBar,
+    // Server-side codebase indexing and search.
+    FeatureFlag::FullSourceCodeEmbedding,
+    FeatureFlag::RemoteCodebaseIndexing,
+    FeatureFlag::CrossRepoContext,
+    FeatureFlag::CodebaseIndexPersistence,
+    FeatureFlag::CodebaseIndexSpeedbump,
+    FeatureFlag::SearchCodebaseUI,
+    // MCP servers.
+    FeatureFlag::McpServer,
+    FeatureFlag::McpOauth,
+    FeatureFlag::MCPGroupedServerContext,
+    FeatureFlag::McpDebuggingIds,
+    FeatureFlag::FileBasedMcp,
+    FeatureFlag::McpJsonTreeView,
+    FeatureFlag::WellKnownMcpIds,
+    FeatureFlag::FactoryMcp,
+    FeatureFlag::PreviewUrlsMcp,
+    // Cloud agents, environments and handoff.
+    FeatureFlag::AmbientAgentsCommandLine,
+    FeatureFlag::AmbientAgentsRTC,
+    FeatureFlag::AmbientAgentsImageUpload,
+    FeatureFlag::ScheduledAmbientAgents,
+    FeatureFlag::CloudEnvironments,
+    FeatureFlag::CreateEnvironmentSlashCommand,
+    FeatureFlag::CloudMode,
+    FeatureFlag::CloudModeFromLocalSession,
+    FeatureFlag::CloudModeHostSelector,
+    FeatureFlag::CloudModeImageContext,
+    FeatureFlag::CloudModeSetupV2,
+    FeatureFlag::CloudModeInputV2,
+    FeatureFlag::CloudAgentExecutionConfig,
+    FeatureFlag::CloudAgentShellRespawn,
+    FeatureFlag::CloudRunners,
+    FeatureFlag::CloudAgentRunners,
+    FeatureFlag::WarpManagedSecrets,
+    FeatureFlag::SyncAmbientPlans,
+    FeatureFlag::OzPlatformSkills,
+    FeatureFlag::OzIdentityFederation,
+    FeatureFlag::OzLaunchModal,
+    FeatureFlag::OzHandoff,
+    FeatureFlag::OpenWarpLaunchModal,
+    FeatureFlag::OrchestrationLaunchModal,
+    FeatureFlag::MultiLevelOrchestration,
+    FeatureFlag::HandoffCloudCloud,
+    FeatureFlag::HandoffLocalCloud,
+    FeatureFlag::PeriodicHandoffCheckpoints,
+    FeatureFlag::ShellWidgetHandoff,
+    FeatureFlag::FactoryDeferredRepositories,
+    FeatureFlag::GitCredentialRefresh,
+    FeatureFlag::GitMirrorCache,
+    FeatureFlag::IntegrationCommand,
+    FeatureFlag::ArtifactCommand,
+    FeatureFlag::ConversationArtifacts,
+    FeatureFlag::StoredScreenshots,
+    FeatureFlag::RemoteCodeReview,
+    FeatureFlag::HOAOnboardingFlow,
+    FeatureFlag::HOARemoteControl,
+    FeatureFlag::HOANotifications,
+    // Server-side tools and computer use.
+    FeatureFlag::WebSearchUI,
+    FeatureFlag::WebFetchUI,
+    FeatureFlag::AgentModeComputerUse,
+    FeatureFlag::LocalComputerUse,
+    FeatureFlag::BackgroundComputerUse,
+    FeatureFlag::VideoRecording,
+    FeatureFlag::WindowsVideoRecording,
+    // Third-party CLI agents, which send data to their own clouds.
+    FeatureFlag::AgentHarness,
+    FeatureFlag::AcpHarness,
+    FeatureFlag::LocalClaudeCodexChildHarnesses,
+    FeatureFlag::AgentCliLaunchModal,
+    FeatureFlag::CLIAgentRichInput,
+    FeatureFlag::CtrlCCancelsThirdPartyHarness,
+    FeatureFlag::OpenCodeNotifications,
+    FeatureFlag::CodexNotifications,
+    FeatureFlag::CodexPlugin,
+    FeatureFlag::GeminiNotifications,
+    FeatureFlag::FigmaDetection,
+    // Installs Warp's remote-server binary on SSH hosts by downloading it from Warp's servers.
+    FeatureFlag::SshRemoteServer,
+    // Exposes a local control socket for scripting.
+    FeatureFlag::WarpControlCli,
+    // Served by the agent API; the local equivalent is the legacy suggestions path.
+    FeatureFlag::PromptSuggestionsViaMAA,
+];
+
+/// Features LocalShell always enables.
+pub const LOCALSHELL_ENABLED_FLAGS: &[FeatureFlag] = &[
+    // Never create an anonymous account on Warp's servers; the app starts straight into the
+    // terminal.
+    FeatureFlag::SkipFirebaseAnonymousUser,
+];
+
 /// Flags that we want to allow to switch at runtime (assuming RuntimeFeatureFlags is set)
 pub const RUNTIME_FEATURE_FLAGS: &[FeatureFlag] = &[FeatureFlag::LocalClaudeCodexChildHarnesses];
 

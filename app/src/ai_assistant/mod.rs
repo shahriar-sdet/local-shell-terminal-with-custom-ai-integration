@@ -108,6 +108,23 @@ impl From<AIGeneratedCommand> for Workflow {
     }
 }
 
+impl From<crate::ai::local_generation::GeneratedCommand> for AIGeneratedCommand {
+    fn from(value: crate::ai::local_generation::GeneratedCommand) -> Self {
+        AIGeneratedCommand {
+            command: value.command,
+            description: value.description,
+            parameters: value
+                .parameters
+                .into_iter()
+                .map(|parameter| AIGeneratedCommandParameter {
+                    id: parameter.id,
+                    description: parameter.description,
+                })
+                .collect_vec(),
+        }
+    }
+}
+
 impl From<GeneratedCommand> for AIGeneratedCommand {
     fn from(value: GeneratedCommand) -> Self {
         AIGeneratedCommand {

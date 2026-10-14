@@ -9,14 +9,14 @@ use super::convert_to::convert_input;
 use super::{ConvertToAPITypeError, RequestParams, ResponseStream};
 use crate::ai::agent::redaction;
 use crate::ai::blocklist::video_recording_enabled;
-use crate::server::server_api::{AIApiError, ServerApi};
-use crate::server::team_scope::RequestTeamScope;
+use crate::ai::local_ai_runtime;
+use crate::server::server_api::AIApiError;
 use crate::terminal::model::session::SessionType;
 
+/// Answers an agent request with the user's own model through [`local_agent`]; requests never
+/// reach Warp's servers.
 pub async fn generate_multi_agent_output(
-    server_api: Arc<ServerApi>,
     mut params: RequestParams,
-    team_scope: RequestTeamScope,
     cancellation_rx: futures::channel::oneshot::Receiver<()>,
 ) -> Result<ResponseStream, ConvertToAPITypeError> {
     let supported_tools = params
@@ -148,51 +148,32 @@ pub async fn generate_multi_agent_output(
         mcp_context: params.mcp_context.map(Into::into),
     };
 
-    let response_stream = warp_multi_agent_client::generate_multi_agent_output(
-        server_api.as_ref(),
-        &request,
-        team_scope.team_uid().map(|uid| uid.uid()),
-    )
-    .await;
-    match response_stream {
-        Ok(stream) => {
-            let output_stream = stream
-                .then(|result| async {
-                    match result {
-                        Ok(event) => Ok(event),
-                        Err(error) => Err(convert_multi_agent_client_error(error).await),
-                    }
-                })
-                .take_until(cancellation_rx);
-            Ok(Box::pin(output_stream))
-        }
-        Err(e) => {
+    let runtime = match local_ai_runtime::current_or_error() {
+        Ok(runtime) => runtime,
+        Err(error) => {
             let (tx, rx) = async_channel::unbounded();
             let _ = tx
-                .send(Err(convert_multi_agent_client_error(e).await))
+                .send(Err(Arc::new(AIApiError::Other(anyhow::Error::from(error)))))
                 .await;
-            Ok(Box::pin(rx))
-        }
-    }
-}
-
-async fn convert_multi_agent_client_error(
-    error: warp_multi_agent_client::Error,
-) -> Arc<AIApiError> {
-    let error = match error {
-        warp_multi_agent_client::Error::Authentication(error)
-        | warp_multi_agent_client::Error::AmbientHeaders(error) => AIApiError::Other(error),
-        warp_multi_agent_client::Error::Base64Decode(error) => {
-            AIApiError::Other(anyhow::Error::from(error))
-        }
-        warp_multi_agent_client::Error::ProtobufDecode(error) => {
-            AIApiError::Other(anyhow::Error::from(error))
-        }
-        warp_multi_agent_client::Error::EventSource(error) => {
-            AIApiError::from_stream_error("GenerateMultiAgentOutput", *error).await
+            return Ok(Box::pin(rx));
         }
     };
-    Arc::new(error)
+    let mut config = runtime.config;
+    // The model picker lists the endpoint's models, so a selected model is used as-is; ids from
+    // a stale Warp model cache fall back to the configured agent model.
+    let selected_model = request
+        .settings
+        .as_ref()
+        .and_then(|settings| settings.model_config.as_ref())
+        .map(|model_config| model_config.base.trim().to_owned())
+        .filter(|model| !model.is_empty() && local_ai_runtime::is_known_model(model));
+    if let Some(model) = selected_model {
+        config.agent.model = model;
+    }
+    let output_stream = local_agent::generate_multi_agent_output(runtime.client, config, request)
+        .map(Ok)
+        .take_until(cancellation_rx);
+    Ok(Box::pin(output_stream))
 }
 
 fn api_keys_with_warp_credit_fallback_setting(

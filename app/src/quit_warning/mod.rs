@@ -8,6 +8,7 @@ use warpui::{
     AppContext, EntityId, SingletonEntity, ViewContext, ViewHandle, WeakViewHandle, WindowId,
 };
 
+use crate::channel::ChannelState;
 use crate::code::editor_management::{CodeEditorStatus, CodeEditorSummary};
 use crate::code::view::CodeView;
 use crate::code_review::code_review_view::CodeReviewView;
@@ -536,12 +537,13 @@ impl<'a> QuitWarningDialog<'a> {
             buttons.push(ModalButton::for_app("Cancel".to_string(), callback));
         }
 
+        let quit_app_title = format!("Quit {}?", ChannelState::app_name());
         let title = match &state.scope {
             QuitScope::Pane { .. } => "Close pane?",
             QuitScope::Tabs(tabs) if tabs.len() == 1 => "Close tab?",
             QuitScope::Tabs(_) => "Close tabs?",
             QuitScope::Window(_) => "Close window?",
-            QuitScope::App => "Quit Warp?",
+            QuitScope::App => quit_app_title.as_str(),
             QuitScope::EditorTab { .. } => "Save changes?",
         };
 

@@ -4651,6 +4651,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "egress_guard"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "thiserror 2.0.17",
+ "url",
+]
+
+[[package]]
 name = "either"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6490,6 +6499,7 @@ dependencies = [
  "async-stream",
  "bytes",
  "cfg-if",
+ "egress_guard",
  "futures",
  "gloo",
  "http 1.4.0",
@@ -6503,9 +6513,11 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
+ "tokio",
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",
+ "url",
  "warp_core",
  "warp_errors",
  "wasm-bindgen-futures",
@@ -7859,6 +7871,46 @@ name = "local-waker"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4d873d7c67ce09b42110d801813efbc9364414e356be9935700d368351657487"
+
+[[package]]
+name = "local_agent"
+version = "0.1.0"
+dependencies = [
+ "async-stream",
+ "base64 0.22.1",
+ "chrono",
+ "futures",
+ "instant",
+ "local_ai",
+ "log",
+ "prost-types",
+ "serde",
+ "serde_json",
+ "uuid",
+ "warp_multi_agent_api",
+]
+
+[[package]]
+name = "local_ai"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-compat",
+ "async-stream",
+ "bytes",
+ "egress_guard",
+ "futures",
+ "http_client",
+ "instant",
+ "log",
+ "reqwest",
+ "schemars 1.0.4",
+ "serde",
+ "serde_json",
+ "settings_value",
+ "thiserror 2.0.17",
+ "url",
+]
 
 [[package]]
 name = "local_control"
@@ -15315,6 +15367,7 @@ dependencies = [
  "directories",
  "dirs 6.0.0",
  "dunce",
+ "egress_guard",
  "email_address 0.2.3",
  "embed-resource",
  "embed_plist",
@@ -15365,6 +15418,8 @@ dependencies = [
  "libc",
  "libsqlite3-sys",
  "line-ending",
+ "local_agent",
+ "local_ai",
  "local_control",
  "log",
  "log-panics",
@@ -16825,6 +16880,7 @@ dependencies = [
  "async-tungstenite",
  "base64 0.22.1",
  "cfg-if",
+ "egress_guard",
  "futures",
  "futures-test-sink",
  "futures-util",

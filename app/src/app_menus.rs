@@ -8,6 +8,7 @@ use enclose::enclose;
 use itertools::Itertools;
 use settings::Setting as _;
 use settings::manager::SettingsManager;
+use warp_core::channel::ChannelState;
 use warp_core::context_flag::ContextFlag;
 use warp_errors::{report_error, report_if_error};
 use warp_util::path::user_friendly_path;
@@ -187,11 +188,14 @@ fn make_new_app_menu(ctx: &AppContext) -> Menu {
         menu_items.push(MenuItem::Services);
     }
 
-    menu_items.push(MenuItem::Separator);
-    menu_items.push(link_menu_item(
-        "Privacy Policy...",
-        links::PRIVACY_POLICY_URL.into(),
-    ));
+    // Warp's privacy policy describes Warp's services, which LocalShell doesn't use.
+    if !ChannelState::is_local_shell() {
+        menu_items.push(MenuItem::Separator);
+        menu_items.push(link_menu_item(
+            "Privacy Policy...",
+            links::PRIVACY_POLICY_URL.into(),
+        ));
+    }
 
     let debug_menu_items = debug_menu_items();
     if !debug_menu_items.is_empty() {
@@ -210,7 +214,7 @@ fn make_new_app_menu(ctx: &AppContext) -> Menu {
     menu_items.push(MenuItem::Standard(StandardAction::ShowAllApps));
     menu_items.push(MenuItem::Separator);
     menu_items.push(MenuItem::Custom(CustomMenuItem::new(
-        "Set Warp as Default Terminal",
+        &format!("Set {} as Default Terminal", ChannelState::app_name()),
         move |ctx| {
             DefaultTerminal::handle(ctx).update(ctx, |default_terminal, ctx| {
                 default_terminal.make_warp_default(ctx)
@@ -229,23 +233,25 @@ fn make_new_app_menu(ctx: &AppContext) -> Menu {
         None,
     )));
     menu_items.push(MenuItem::Separator);
-    menu_items.push(MenuItem::Custom(CustomMenuItem::new(
-        "Log out",
-        auth::maybe_log_out,
-        move |_, ctx| {
-            let is_anonymous = AuthStateProvider::handle(ctx)
-                .as_ref(ctx)
-                .get()
-                .is_anonymous_or_logged_out();
-            MenuItemPropertyChanges {
-                disabled: Some(is_anonymous),
-                ..Default::default()
-            }
-        },
-        None,
-    )));
+    if !ChannelState::is_local_shell() {
+        menu_items.push(MenuItem::Custom(CustomMenuItem::new(
+            "Log out",
+            auth::maybe_log_out,
+            move |_, ctx| {
+                let is_anonymous = AuthStateProvider::handle(ctx)
+                    .as_ref(ctx)
+                    .get()
+                    .is_anonymous_or_logged_out();
+                MenuItemPropertyChanges {
+                    disabled: Some(is_anonymous),
+                    ..Default::default()
+                }
+            },
+            None,
+        )));
+    }
     menu_items.push(MenuItem::Standard(StandardAction::Quit));
-    Menu::new("Warp", menu_items)
+    Menu::new(ChannelState::app_name(), menu_items)
 }
 
 fn make_new_file_menu(ctx: &AppContext) -> Menu {
@@ -301,7 +307,7 @@ fn make_new_edit_menu(ctx: &AppContext) -> Menu {
     ];
     let group_5 = vec![
         MenuItem::Custom(CustomMenuItem::new(
-            "Use Warp's Prompt",
+            &format!("Use {}'s Prompt", ChannelState::app_name()),
             move |ctx| ctx.dispatch_global_action("app:toggle_user_ps1", &()),
             move |_props, ctx| MenuItemPropertyChanges {
                 checked: Some(
@@ -926,6 +932,17 @@ fn feedback_menu_item() -> MenuItem {
 }
 
 fn make_new_help_menu() -> Menu {
+    // LocalShell keeps only the documentation link: feedback and the community channels are Warp
+    // services.
+    if ChannelState::is_local_shell() {
+        return Menu::new(
+            "Help",
+            vec![link_menu_item(
+                "Warp Documentation...",
+                links::USER_DOCS_URL.into(),
+            )],
+        );
+    }
     Menu::new(
         "Help",
         vec![

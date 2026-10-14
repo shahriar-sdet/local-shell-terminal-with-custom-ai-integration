@@ -123,6 +123,10 @@ if [ -z "$NO_LICENSES" ]; then
   done
 fi
 
+# Ship this project's own license texts so the About page can point users to them, as the AGPL's
+# "Appropriate Legal Notices" require.
+cp "$REPO_ROOT/LICENSE-AGPL" "$REPO_ROOT/LICENSE-MIT" "$DEST_DIR/"
+
 # Generate settings JSON schema unless explicitly skipped.
 if [ "${SKIP_SETTINGS_SCHEMA:-}" != "1" ]; then
   SCHEMA_OUTPUT="$DEST_DIR/settings_schema.json"

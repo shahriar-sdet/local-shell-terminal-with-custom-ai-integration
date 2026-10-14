@@ -28,6 +28,9 @@ use crate::channel::{Channel, ChannelState};
 /// repository workflows would be stored (in "./.warp/workflows").
 pub const WARP_CONFIG_DIR: &str = ".warp";
 
+/// The home-relative config directory of LocalShell (the OSS channel).
+const LOCAL_SHELL_CONFIG_DIR: &str = ".localshell";
+
 /// The name of the folder that stores Warp execution logs and network logs.
 /// This is currently only used on Windows to maintain backwards compatibility.
 pub const WARP_LOGS_DIR: &str = "logs";
@@ -37,7 +40,7 @@ fn base_warp_config_dir_name() -> String {
         // Preview shares the same directory as Stable for backward
         // compatibility — existing users already have config in `.warp`.
         Channel::Stable | Channel::Preview => WARP_CONFIG_DIR.to_owned(),
-        Channel::Oss => format!("{WARP_CONFIG_DIR}-oss"),
+        Channel::Oss => LOCAL_SHELL_CONFIG_DIR.to_owned(),
         Channel::Dev => format!("{WARP_CONFIG_DIR}-dev"),
         Channel::Integration => format!("{WARP_CONFIG_DIR}-integration"),
         Channel::Local => format!("{WARP_CONFIG_DIR}-local"),
@@ -101,7 +104,7 @@ fn macos_config_dir_name_for(channel: Channel, data_profile: Option<&str>) -> St
     let base_dir_name = match channel {
         Channel::Stable => WARP_CONFIG_DIR.to_owned(),
         Channel::Preview => format!("{WARP_CONFIG_DIR}-preview"),
-        Channel::Oss => format!("{WARP_CONFIG_DIR}-oss"),
+        Channel::Oss => LOCAL_SHELL_CONFIG_DIR.to_owned(),
         Channel::Dev => format!("{WARP_CONFIG_DIR}-dev"),
         Channel::Integration => format!("{WARP_CONFIG_DIR}-integration"),
         Channel::Local => format!("{WARP_CONFIG_DIR}-local"),
@@ -132,11 +135,11 @@ pub fn data_dir() -> PathBuf {
 ///
 /// Most TUI channel binaries use the same application ID as the GUI. The OSS
 /// TUI is the exception: it uses `WarpTui`, while the corresponding GUI uses
-/// `WarpOss`.
+/// `LocalShell`.
 #[cfg(any(not(target_os = "macos"), test))]
 fn gui_app_id_for_channel(channel: Channel, current_app_id: AppId) -> AppId {
     match channel {
-        Channel::Oss => AppId::new("dev", "warp", "WarpOss"),
+        Channel::Oss => AppId::new("io.github", "shahriar-sdet", "LocalShell"),
         Channel::Stable
         | Channel::Preview
         | Channel::Dev
@@ -212,7 +215,11 @@ pub fn gui_mcp_config_file_path() -> Option<PathBuf> {
 /// changed once established.
 #[cfg(target_os = "macos")]
 fn macos_tui_config_dir_name() -> String {
-    macos_config_dir_name().replacen(WARP_CONFIG_DIR, ".warp_cli", 1)
+    let gui_dir_name = macos_config_dir_name();
+    match gui_dir_name.strip_prefix(LOCAL_SHELL_CONFIG_DIR) {
+        Some(suffix) => format!("{LOCAL_SHELL_CONFIG_DIR}_cli{suffix}"),
+        None => gui_dir_name.replacen(WARP_CONFIG_DIR, ".warp_cli", 1),
+    }
 }
 
 /// Returns the path to the directory where non-portable configuration files for

@@ -2357,8 +2357,10 @@ pub(crate) fn initialize_app(
     // LogManager must be registered before any subsystem (e.g. MCP, LSP) that creates file-based loggers.
     ctx.add_singleton_model(|_| simple_logger::manager::LogManager::new());
 
+    // With MCP disabled (always, in LocalShell) no server from a previous session is restarted.
     let running_mcp_servers = app_state
         .as_ref()
+        .filter(|_| FeatureFlag::McpServer.is_enabled())
         .map(|app_state| app_state.running_mcp_servers.as_slice())
         .unwrap_or(&[]);
 
@@ -2371,7 +2373,11 @@ pub(crate) fn initialize_app(
     ctx.add_singleton_model(|ctx| {
         TemplatableMCPServerManager::new(
             persisted_mcp_server_installations,
-            mcp_servers_to_restore,
+            if FeatureFlag::McpServer.is_enabled() {
+                mcp_servers_to_restore
+            } else {
+                Default::default()
+            },
             running_mcp_servers,
             ctx,
         )
@@ -2521,6 +2527,7 @@ pub(crate) fn initialize_app(
 
     ctx.add_singleton_model(LocalWorkflows::new);
 
+    ctx.add_singleton_model(ai::local_ai_runtime::LocalAiRuntime::new);
     ctx.add_singleton_model(LLMPreferences::new);
     ctx.add_singleton_model(HarnessAvailabilityModel::new);
     ctx.add_singleton_model(ConnectedSelfHostedWorkersModel::new);

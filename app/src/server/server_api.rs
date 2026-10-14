@@ -59,6 +59,7 @@ use workspace::WorkspaceClient;
 use super::experiments::{ServerExperiment, ServerExperiments};
 use crate::ai::ambient_agents::AmbientAgentTaskId;
 use crate::ai::get_relevant_files::api::{GetRelevantFiles, GetRelevantFilesResponse};
+use crate::ai::local_generation;
 use crate::ai::predict::generate_ai_input_suggestions::GenerateAIInputSuggestionsRequest;
 use crate::ai::predict::generate_am_query_suggestions::GenerateAMQuerySuggestionsRequest;
 use crate::ai::predict::predict_am_queries::{PredictAMQueriesRequest, PredictAMQueriesResponse};
@@ -287,40 +288,6 @@ impl AIApiError {
             }
         } else {
             AIApiError::ServerOverloaded
-        }
-    }
-
-    /// Format a stream error into a human-readable error message. This will read the response
-    /// body if there is one.
-    pub(crate) async fn from_stream_error(
-        stream_type: &'static str,
-        err: reqwest_eventsource::Error,
-    ) -> Self {
-        match err {
-            reqwest_eventsource::Error::InvalidStatusCode(
-                http::StatusCode::TOO_MANY_REQUESTS,
-                res,
-            ) => {
-                let headers = res.headers().clone();
-                let body = res.text().await.ok();
-                Self::error_for_429(&headers, body)
-            }
-            reqwest_eventsource::Error::InvalidStatusCode(status, res) => Self::ErrorStatus(
-                status,
-                res.text()
-                    .await
-                    .unwrap_or_else(|e| format!("(no response body: {e:#})")),
-            ),
-            reqwest_eventsource::Error::Transport(err) => Self::from_transport_error(err),
-            err => AIApiError::Stream {
-                stream_type,
-                // On WASM, `reqwest_eventsource::Error` doesn't implement `Into<anyhow::Error>` or
-                // `Send` because it may contain a `wasm_bindgen` JS value.
-                #[cfg(target_family = "wasm")]
-                source: anyhow!("{err:#?}"),
-                #[cfg(not(target_family = "wasm"))]
-                source: anyhow!(err),
-            },
         }
     }
 
@@ -1165,35 +1132,15 @@ impl ServerApi {
             .flush_and_persist_events(max_event_count, settings_snapshot)
     }
 
-    /// Hits the /ai/generate_input_suggestions endpoint to get the predicted next action, based on past context.
+    /// Predicts the next command with the user's own model.
     pub async fn generate_ai_input_suggestions(
         &self,
         request: &GenerateAIInputSuggestionsRequest,
-        team_scope: RequestTeamScope,
     ) -> Result<generate_ai_input_suggestions::GenerateAIInputSuggestionsResponseV2, AIApiError>
     {
-        let auth_token = self.get_or_refresh_access_token().await?;
-
-        let mut request_builder = self.base_client.http_client().post(format!(
-            "{}/ai/generate_input_suggestions",
-            ChannelState::server_root_url()
-        ));
-        if let Some(team_uid) = team_scope.team_uid() {
-            request_builder = request_builder.header(TEAM_UID_HEADER, team_uid.uid());
-        }
-        let response = if let Some(token) = auth_token.as_bearer_token() {
-            request_builder.bearer_auth(token)
-        } else {
-            request_builder
-        }
-        .json(request)
-        .send()
-        .await?
-        .error_for_status_with_body()
-        .await?
-        .json()
-        .await?;
-        Ok(response)
+        local_generation::next_command(request)
+            .await
+            .map_err(|error| AIApiError::Other(error.into()))
     }
 
     pub async fn get_relevant_files(
@@ -1225,72 +1172,24 @@ impl ServerApi {
         Ok(response)
     }
 
-    /// Hits the /ai/generate_am_query_suggestions endpoint to get the predicted next query.
+    /// Suggests a follow-up agent request with the user's own model.
     pub async fn generate_am_query_suggestions(
         &self,
         request: &GenerateAMQuerySuggestionsRequest,
-        team_scope: RequestTeamScope,
     ) -> Result<generate_am_query_suggestions::GenerateAMQuerySuggestionsResponse, AIApiError> {
-        let auth_token = self.get_or_refresh_access_token().await?;
-
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "agent_mode_evals")] {
-                let url = format!(
-                    "{}/agent-mode-evals/generate_am_query_suggestions",
-                    ChannelState::server_root_url()
-                );
-            } else {
-                let url = format!(
-                    "{}/ai/generate_am_query_suggestions",
-                    ChannelState::server_root_url()
-                );
-            }
-        }
-
-        let mut request_builder = self.base_client.http_client().post(url);
-        if let Some(token) = auth_token.as_bearer_token() {
-            request_builder = request_builder.bearer_auth(token);
-        }
-        if let Some(team_uid) = team_scope.team_uid() {
-            request_builder = request_builder.header(TEAM_UID_HEADER, team_uid.uid());
-        }
-        let response = request_builder
-            .json(request)
-            .send()
-            .await?
-            .error_for_status_with_body()
-            .await?
-            .json()
-            .await?;
-        Ok(response)
+        local_generation::agent_query_suggestion(request)
+            .await
+            .map_err(|error| AIApiError::Other(error.into()))
     }
 
+    /// Completes a partially typed agent request with the user's own model.
     pub async fn predict_am_queries(
         &self,
         request: &PredictAMQueriesRequest,
-        team_scope: RequestTeamScope,
     ) -> Result<PredictAMQueriesResponse, AIApiError> {
-        let auth_token = self.get_or_refresh_access_token().await?;
-        let mut request_builder = self.base_client.http_client().post(format!(
-            "{}/ai/predict_am_queries",
-            ChannelState::server_root_url()
-        ));
-        if let Some(team_uid) = team_scope.team_uid() {
-            request_builder = request_builder.header(TEAM_UID_HEADER, team_uid.uid());
-        }
-        let response = if let Some(token) = auth_token.as_bearer_token() {
-            request_builder.bearer_auth(token)
-        } else {
-            request_builder
-        }
-        .json(request)
-        .send()
-        .await?
-        .error_for_status_with_body()
-        .await?
-        .json()
-        .await?;
-        Ok(response)
+        local_generation::complete_agent_query(request)
+            .await
+            .map_err(|error| AIApiError::Other(error.into()))
     }
 
     /// Hits the /ai/transcribe endpoint to get the transcription for the given audio.

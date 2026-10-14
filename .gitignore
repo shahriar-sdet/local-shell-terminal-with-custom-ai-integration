@@ -70,3 +70,9 @@ __pycache__/
 # Project notes
 .note/
 .claude/scheduled_tasks.lock
+
+# Graphify code knowledge graph (rebuildable: `ai-graph`)
+graphify-out/
+
+# Local Claude Code instructions
+CLAUDE.md

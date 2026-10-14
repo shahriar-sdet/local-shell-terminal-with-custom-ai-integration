@@ -7,6 +7,7 @@ use ai::api_keys::{
 pub use ai::{LLMId, LLMProvider};
 use parking_lot::FairMutex;
 use serde::{Deserialize, Serialize, de};
+use settings::Setting as _;
 use warp_core::features::FeatureFlag;
 use warp_core::ui::Icon;
 use warp_errors::report_error;
@@ -16,13 +17,11 @@ use warpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
 use super::agent::conversation::AIConversation;
 use super::custom_model_routers::{self, CustomModelRouter, ModelConfigError};
 use super::execution_profiles::profiles::AIExecutionProfilesModel;
-use crate::auth::AuthStateProvider;
+use super::local_ai_runtime::{LocalAiRuntime, LocalAiRuntimeEvent, ModelListState};
 use crate::server::ids::ServerId;
-use crate::server::server_api::ServerApiProvider;
+use crate::settings::AISettings;
 use crate::user_config::{WarpConfig, WarpConfigUpdateEvent};
 use crate::workspaces::update_manager::TeamUpdateManager;
-#[cfg(feature = "agent_mode_evals")]
-use crate::workspaces::user_workspaces::ResolvedTeamScope;
 use crate::workspaces::user_workspaces::{TeamScope, UserWorkspaces, UserWorkspacesEvent};
 
 /// Checks if a user's' API key is being used for the given provider.
@@ -814,6 +813,40 @@ struct AvailableLLMsUpdate {
     popup_visibility_state: Arc<FairMutex<UpdatePopupVisibilityState>>,
 }
 
+/// Describes a model offered by the user's endpoint for the model picker.
+fn local_llm_info(model: &local_ai::ModelInfo) -> LLMInfo {
+    let mut details = Vec::new();
+    if let Some(context) = model.loaded_context_lengths.iter().max() {
+        details.push(format!("loaded, {}K context", context / 1024));
+    } else if let Some(max) = model.max_context_length {
+        details.push(format!("up to {}K context", max / 1024));
+    }
+    if model.supports_tools == Some(false) {
+        details.push("not trained for tool use".to_owned());
+    }
+    LLMInfo {
+        display_name: model
+            .display_name
+            .clone()
+            .unwrap_or_else(|| model.id.clone()),
+        base_model_name: model.id.clone(),
+        id: LLMId::from(model.id.clone()),
+        reasoning_level: None,
+        usage_metadata: LLMUsageMetadata {
+            request_multiplier: 1,
+            credit_multiplier: None,
+        },
+        description: (!details.is_empty()).then(|| details.join(" · ")),
+        disable_reason: None,
+        vision_supported: model.supports_vision.unwrap_or(false),
+        spec: None,
+        provider: LLMProvider::Unknown,
+        host_configs: HashMap::new(),
+        discount_percentage: None,
+        context_window: LLMContextWindow::default(),
+    }
+}
+
 /// Singleton model holding user/workspace LLM preferences, including the set of LLMs available for
 /// use as well as the user's preferred LLM for Agent Mode.
 pub struct LLMPreferences {
@@ -875,6 +908,13 @@ impl LLMPreferences {
             });
         }
 
+        ctx.subscribe_to_model(
+            &LocalAiRuntime::handle(ctx),
+            |me, _, event, ctx| match event {
+                LocalAiRuntimeEvent::ModelsChanged => me.apply_local_models(ctx),
+            },
+        );
+
         let base_llm_for_terminal_view = HashMap::new();
         let custom_llms = build_custom_llm_infos(ApiKeyManager::as_ref(ctx).custom_endpoints());
 
@@ -893,13 +933,14 @@ impl LLMPreferences {
         if FeatureFlag::CustomModelRouters.is_enabled() {
             me.rebuild_custom_model_routers(ctx);
         }
+        me.apply_local_models(ctx);
 
         // In agent mode eval builds, eagerly kick off a fetch of the model list from the server
         // so that it's available by the time test steps like `set_preferred_agent_mode_llm` run.
         // In production, this is handled reactively (on auth complete, network online, etc.)
         // to avoid duplicate requests at startup.
         #[cfg(feature = "agent_mode_evals")]
-        me.refresh_available_models(&ResolvedTeamScope::teamless(), ctx);
+        me.refresh_available_models(ctx);
 
         me
     }
@@ -1977,78 +2018,52 @@ impl LLMPreferences {
         *last_update.popup_visibility_state.lock() = UpdatePopupVisibilityState::Hidden;
     }
 
-    /// Fetches the latest set of models from the server for the currently logged in user, and updates the model.
-    pub fn refresh_authed_models(
-        &self,
-        scope: &(impl TeamScope + ?Sized),
-        ctx: &mut ModelContext<Self>,
-    ) {
-        self.refresh_authed_models_for_team_uid(scope.team_uid(), ctx);
+    /// Reloads the model list from the user's AI endpoint; the picker updates once it arrives.
+    pub fn refresh_available_models(&self, ctx: &mut ModelContext<Self>) {
+        LocalAiRuntime::handle(ctx).update(ctx, |runtime, ctx| runtime.refresh_models(ctx));
     }
 
-    fn refresh_authed_models_for_team_uid(
-        &self,
-        team_uid: Option<ServerId>,
-        ctx: &mut ModelContext<Self>,
-    ) {
-        // Don't try to fetch auth'd models if the user is not logged in yet.
-        if !AuthStateProvider::as_ref(ctx).get().is_logged_in() {
-            return;
+    /// Publishes the endpoint's models as the choices for every agent feature. The configured
+    /// agent model is always offered, even before the endpoint has answered.
+    fn apply_local_models(&mut self, ctx: &mut ModelContext<Self>) {
+        let runtime = LocalAiRuntime::as_ref(ctx);
+        let configured = AISettings::as_ref(ctx)
+            .local_ai
+            .value()
+            .model_for(local_ai::TaskKind::Agent)
+            .to_owned();
+        let mut choices: Vec<LLMInfo> = match runtime.models() {
+            ModelListState::Loaded(models) => models.iter().map(local_llm_info).collect(),
+            ModelListState::NotLoaded | ModelListState::Loading | ModelListState::Failed(_) => {
+                Vec::new()
+            }
+        };
+        if !configured.is_empty() && !choices.iter().any(|info| info.id.to_string() == configured) {
+            choices.insert(
+                0,
+                local_llm_info(&local_ai::ModelInfo {
+                    id: configured.clone(),
+                    ..Default::default()
+                }),
+            );
         }
-
-        let ai_api_client = ServerApiProvider::as_ref(ctx).get_ai_client();
-        ctx.spawn(
-            async move { ai_api_client.get_feature_model_choices().await },
-            move |me, result, ctx| match result {
-                Ok(update) => {
-                    if update
-                        != *UserWorkspaces::as_ref(ctx).feature_model_choice_for_team_uid(team_uid)
-                    {
-                        me.on_server_update(team_uid, update, ctx);
-                    }
-                    // Clear the flag; on_server_update also clears it but may be skipped
-                    // when the list is unchanged.
-                    me.set_agent_mode_models_unavailable_for_team_uid(team_uid, false);
-                }
-                Err(e) => {
-                    report_error!(e.context("Failed to fetch LLMs from server"));
-                    // Mark the model list unavailable so validators surface a server error
-                    // instead of blaming the user's model id.
-                    me.set_agent_mode_models_unavailable_for_team_uid(team_uid, true);
-                }
-            },
-        );
-    }
-
-    /// No auth required (i.e. to populate the pre-login onboarding picker).
-    fn refresh_public_models(&self, ctx: &mut ModelContext<Self>) {
-        let ai_api_client = ServerApiProvider::as_ref(ctx).get_ai_client();
-        ctx.spawn(
-            async move { ai_api_client.get_free_available_models(None).await },
-            |me, result, ctx| match result {
-                Ok(update) => {
-                    if update
-                        != *UserWorkspaces::as_ref(ctx).feature_model_choice_for_team_uid(None)
-                    {
-                        me.on_server_update(None, update, ctx);
-                    }
-                }
-                Err(e) => {
-                    report_error!(e.context("Failed to fetch free-tier LLMs from server"));
-                }
-            },
-        );
-    }
-
-    pub fn refresh_available_models(
-        &self,
-        scope: &(impl TeamScope + ?Sized),
-        ctx: &mut ModelContext<Self>,
-    ) {
-        if AuthStateProvider::as_ref(ctx).get().is_logged_in() {
-            self.refresh_authed_models(scope, ctx);
-        } else {
-            self.refresh_public_models(ctx);
+        let Some(default_id) = (!configured.is_empty())
+            .then(|| LLMId::from(configured))
+            .or_else(|| choices.first().map(|info| info.id.clone()))
+        else {
+            return;
+        };
+        let Ok(available) = AvailableLLMs::new(default_id, choices, None) else {
+            return;
+        };
+        let update = ModelsByFeature {
+            agent_mode: available.clone(),
+            coding: available.clone(),
+            cli_agent: Some(available.clone()),
+            computer_use: Some(available),
+        };
+        if update != *UserWorkspaces::as_ref(ctx).feature_model_choice_for_team_uid(None) {
+            self.on_server_update(None, update, ctx);
         }
     }
 
@@ -2077,7 +2092,7 @@ impl LLMPreferences {
             return;
         }
         // Team-scoped catalogs live on the workspace metadata, so refresh both.
-        self.refresh_authed_models_for_team_uid(None, ctx);
+        self.refresh_available_models(ctx);
         TeamUpdateManager::handle(ctx).update(ctx, |manager, ctx| {
             drop(manager.refresh_workspace_metadata(ctx));
         });

@@ -6,15 +6,19 @@ use anyhow::Result;
 use warp_core::AppId;
 use warp_core::channel::{Channel, ChannelConfig, ChannelState, OzConfig, WarpServerConfig};
 
-// Simple wrapper around warp::run() for Warp OSS builds.
+// Entry point for LocalShell: the OSS build with every Warp service removed and all outbound
+// traffic restricted to the AI endpoint the user configures.
 fn main() -> Result<()> {
+    // Must happen before anything can open a connection; child processes re-enter here too.
+    egress_guard::restrict();
+
     let mut state = ChannelState::new(
         Channel::Oss,
         ChannelConfig {
-            app_id: AppId::new("dev", "warp", "WarpOss"),
-            logfile_name: "warp-oss.log".into(),
-            server_config: WarpServerConfig::production(),
-            oz_config: OzConfig::production(),
+            app_id: AppId::new("io.github", "shahriar-sdet", "LocalShell"),
+            logfile_name: "localshell.log".into(),
+            server_config: WarpServerConfig::disabled(),
+            oz_config: OzConfig::disabled(),
             telemetry_config: None,
             crash_reporting_config: None,
             autoupdate_config: None,
@@ -39,15 +43,15 @@ embed_plist::embed_info_plist_bytes!(r#"
     <key>CFBundleDevelopmentRegion</key>
     <string>English</string>
     <key>CFBundleDisplayName</key>
-    <string>WarpOss</string>
+    <string>LocalShell</string>
     <key>CFBundleExecutable</key>
-    <string>warp-oss</string>
+    <string>localshell</string>
     <key>CFBundleIdentifier</key>
-    <string>dev.warp.WarpOss</string>
+    <string>io.github.shahriar-sdet.LocalShell</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>WarpOss</string>
+    <string>LocalShell</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -59,9 +63,9 @@ embed_plist::embed_info_plist_bytes!(r#"
     <key>UIDesignRequiresCompatibility</key>
     <true/>
     <key>CFBundleURLTypes</key>
-    <array><dict><key>CFBundleURLName</key><string>Custom App</string><key>CFBundleURLSchemes</key><array><string>warposs</string></array></dict></array>
+    <array><dict><key>CFBundleURLName</key><string>Custom App</string><key>CFBundleURLSchemes</key><array><string>localshell</string></array></dict></array>
     <key>NSHumanReadableCopyright</key>
-    <string>© 2026, Denver Technologies, Inc</string>
+    <string>Based on Warp, © 2020-2026 Denver Technologies, Inc. Modifications © 2026 shahriar-sdet. AGPL-3.0.</string>
     </dict>
     </plist>
 "#.as_bytes());

@@ -13,6 +13,7 @@ use features_page::{FeaturesPageView, FeaturesSettingsPageEvent};
 use itertools::Itertools as _;
 use keybindings::KeybindingsView;
 use knowledge_page::{KnowledgePageAction, KnowledgePageEvent, KnowledgePageView};
+use local_ai_page::LocalAiPageView;
 use main_page::{MainPageAction, MainSettingsPageEvent, MainSettingsPageView};
 use mcp_servers_page::MCPServersSettingsPageView;
 use nav::{SettingsNavItem, SettingsUmbrella};
@@ -100,6 +101,7 @@ pub(crate) mod handoff_environment_creation_modal;
 mod join_teams_modal;
 pub mod keybindings;
 mod knowledge_page;
+mod local_ai_page;
 mod main_page;
 pub mod mcp_servers;
 pub mod mcp_servers_page;
@@ -325,6 +327,7 @@ pub enum SettingsSection {
     WarpDrive,
     Warpify,
     // ── Agents umbrella subpages ──
+    LocalAi,
     WarpAgent,
     AgentProfiles,
     AgentMCPServers,
@@ -350,7 +353,8 @@ impl Display for SettingsSection {
             SettingsSection::SharedBlocks => write!(f, "Shared blocks"),
             SettingsSection::Scripting => write!(f, "Scripting"),
             SettingsSection::WarpDrive => write!(f, "Warp Drive"),
-            SettingsSection::WarpAgent => write!(f, "Warp Agent"),
+            SettingsSection::LocalAi => write!(f, "AI provider"),
+            SettingsSection::WarpAgent => write!(f, "{}", ChannelState::agent_name()),
             SettingsSection::AgentProfiles => write!(f, "Profiles"),
             SettingsSection::AgentMCPServers => write!(f, "MCP servers"),
             SettingsSection::Knowledge => write!(f, "Knowledge"),
@@ -365,6 +369,46 @@ impl Display for SettingsSection {
 }
 
 impl SettingsSection {
+    /// Pages for features LocalShell removes: accounts, billing, sharing, Warp Drive, cloud
+    /// agents, MCP, third-party CLI agents and server-side indexing.
+    fn is_removed_in_local_shell(self) -> bool {
+        match self {
+            Self::Account
+            | Self::BillingAndUsage
+            | Self::Referrals
+            | Self::SharedBlocks
+            | Self::Teams
+            | Self::WarpDrive
+            | Self::AgentMCPServers
+            | Self::ThirdPartyCLIAgents
+            | Self::CodeIndexing
+            | Self::CloudEnvironments
+            | Self::WarpCloudAgentAPIKeys => true,
+            Self::About
+            | Self::Appearance
+            | Self::Features
+            | Self::Keybindings
+            | Self::Privacy
+            | Self::Scripting
+            | Self::Warpify
+            | Self::LocalAi
+            | Self::WarpAgent
+            | Self::AgentProfiles
+            | Self::Knowledge
+            | Self::EditorAndCodeReview => false,
+        }
+    }
+
+    /// The section shown when navigating to this one. LocalShell opens the AI provider page in
+    /// place of a removed page.
+    pub fn resolved(self) -> Self {
+        if ChannelState::is_local_shell() && self.is_removed_in_local_shell() {
+            Self::LocalAi
+        } else {
+            self
+        }
+    }
+
     /// Stable identifier for this section, used everywhere the section leaves
     /// the process: the SQLite session-restore key and the
     /// `surface.settings.open --page` warpctrl vocabulary.
@@ -393,6 +437,7 @@ impl SettingsSection {
             Self::Teams => "Teams",
             Self::WarpDrive => "Warp Drive",
             Self::Warpify => "Warpify",
+            Self::LocalAi => "AI provider",
             Self::WarpAgent => "Warp Agent",
             Self::AgentProfiles => "Profiles",
             Self::AgentMCPServers => "MCP servers",
@@ -429,6 +474,7 @@ impl SettingsSection {
             "Teams" => Self::Teams,
             "Warp Drive" | "WarpDrive" => Self::WarpDrive,
             "Warpify" => Self::Warpify,
+            "AI provider" | "LocalAi" => Self::LocalAi,
             // "Oz" and "AI" are older names for what is now the Warp Agent page.
             "Warp Agent" | "Oz" | "AI" => Self::WarpAgent,
             "Profiles" | "AgentProfiles" => Self::AgentProfiles,
@@ -1152,6 +1198,7 @@ macro_rules! update_page {
             SettingsPageViewHandle::Privacy(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Referrals(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Scripting(handle) => $ctx.update_view(handle, $update),
+            SettingsPageViewHandle::LocalAi(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::WarpAgent(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::AgentProfiles(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Knowledge(handle) => $ctx.update_view(handle, $update),
@@ -1238,6 +1285,9 @@ impl SettingsView {
 
         // About page
         let about_page_handle = ctx.add_typed_action_view(AboutPageView::new);
+
+        // AI provider page, under the Agents umbrella
+        let local_ai_page_handle = ctx.add_typed_action_view(LocalAiPageView::new);
 
         // Warp Agent page
         let warp_agent_page_handle = ctx.add_typed_action_view(WarpAgentPageView::new);
@@ -1373,6 +1423,7 @@ impl SettingsView {
 
         let mut settings_pages = vec![
             SettingsPage::new(main_page_handle),
+            SettingsPage::new(local_ai_page_handle),
             SettingsPage::new(warp_agent_page_handle),
             SettingsPage::new(agent_profiles_page_handle),
             SettingsPage::new(knowledge_page_handle),
@@ -1409,6 +1460,7 @@ impl SettingsView {
             SettingsNavItem::Umbrella(SettingsUmbrella::new(
                 "Agents",
                 vec![
+                    SettingsSection::LocalAi,
                     SettingsSection::WarpAgent,
                     SettingsSection::AgentProfiles,
                     SettingsSection::AgentMCPServers,
@@ -1461,7 +1513,8 @@ impl SettingsView {
                 SettingsSection::Account
             }
             other => other.unwrap_or_default(),
-        };
+        }
+        .resolved();
 
         // Auto-expand the umbrella if the initial page is one of its subpages.
         for item in &mut nav_items {
@@ -2042,6 +2095,7 @@ impl SettingsView {
         allow_steal_focus: bool,
         ctx: &mut ViewContext<Self>,
     ) {
+        let section = section.resolved();
         // Every nav target owns its backing page. Check it exists.
         if self.settings_page(section).is_none() {
             return;
@@ -2111,6 +2165,9 @@ impl SettingsView {
     }
 
     fn should_render_page(&self, settings_page: &SettingsPage, app: &AppContext) -> bool {
+        if settings_page.section.resolved() != settings_page.section {
+            return false;
+        }
         match &settings_page.view_handle {
             SettingsPageViewHandle::Main(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Teams(v) => v.as_ref(app).should_render(app),
@@ -2125,6 +2182,7 @@ impl SettingsView {
             SettingsPageViewHandle::Warpify(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Referrals(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Scripting(v) => v.as_ref(app).should_render(app),
+            SettingsPageViewHandle::LocalAi(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::WarpAgent(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::AgentProfiles(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Knowledge(v) => v.as_ref(app).should_render(app),

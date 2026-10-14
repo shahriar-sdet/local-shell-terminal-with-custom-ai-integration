@@ -428,10 +428,13 @@ elif [[ $RELEASE_CHANNEL = "stable" ]]; then
     # Enable heap usage tracking & profiling using jemalloc through pprof.
     FEATURES="$FEATURES,jemalloc_pprof,heap_usage_tracking"
 elif [[ $RELEASE_CHANNEL = "oss" ]]; then
-    WARP_BIN="warp-oss"
-    BUNDLE_ID="dev.warp.WarpOss"
-    WARP_APP_NAME="WarpOss"
-    WARP_SCHEME_NAME="warposs"
+    # LocalShell: the OSS build with every Warp service removed.
+    WARP_BIN="localshell"
+    BUNDLE_ID="io.github.shahriar-sdet.LocalShell"
+    WARP_APP_NAME="LocalShell"
+    WARP_DISPLAY_NAME="LocalShell"
+    WARP_SCHEME_NAME="localshell"
+    DMG_BACKGROUND="app/assets/resources/mac/localshell_install_image.png"
     # The OSS channel does not ship Sentry, so drop the cocoa_sentry feature
     # (which would otherwise pull in the Sentry framework dependency).
     FEATURES="release_bundle,extern_plist"
@@ -580,6 +583,7 @@ if [[ "$ARTIFACT" == "app" ]]; then
   "$WORKSPACE_ROOT_DIR/script/macos/add_framework_rpath" "$BUNDLE_DIR/$WARP_APP_NAME.app/Contents/MacOS/$WARP_BIN"
 
   export WARP_SCHEME_NAME
+  export WARP_DISPLAY_NAME
   export WARP_PLIST_PATH="$BUNDLE_DIR/$WARP_APP_NAME.app/Contents/Info.plist"
   ./script/update_plist
 
@@ -629,7 +633,14 @@ if [[ "$ARTIFACT" == "app" ]]; then
 
   # Temporary key that ChatGPT Desktop can use to determine if the latest version of Warp supports the ChatGPT integration.
   # Once support has been rolled out for a sufficient amount of time we (and ChatGPT) can remove this.
-  plutil -insert SUPPORTS_CHAT_GPT_WORK_WITH_APPS -bool true "$BUNDLE_DIR"/$WARP_APP_NAME.app/Contents/Info.plist
+  # LocalShell doesn't advertise it: terminal content must not flow to third-party apps.
+  if [[ $RELEASE_CHANNEL != "oss" ]]; then
+    plutil -insert SUPPORTS_CHAT_GPT_WORK_WITH_APPS -bool true "$BUNDLE_DIR"/$WARP_APP_NAME.app/Contents/Info.plist
+  fi
+
+  if [[ -n "${WARP_DISPLAY_NAME:-}" ]]; then
+    plutil -replace CFBundleDisplayName -string "$WARP_DISPLAY_NAME" "$BUNDLE_DIR/$WARP_APP_NAME.app/Contents/Info.plist"
+  fi
 
   # Add LSBackgroundOnly key and set it to false since we need a UI app
   plutil -insert LSBackgroundOnly -bool false "$BUNDLE_DIR"/$WARP_APP_NAME.app/Contents/Info.plist
@@ -685,14 +696,17 @@ if [[ "$ARTIFACT" == "app" ]]; then
     cp -HR "target/$DEFAULT_TARGET/$TARGET_PROFILE_DIR/$WARP_BIN.dSYM" "$OUT_DIR/"
   fi
 
-  # Note that the dock tile plugin is pre-built for both arm64 and x86_64 so we don't need to run lipo on it.
-  echo "Creating PlugIns directory and copying pre-built DockTilePlugin..."
-  mkdir -p "$BUNDLE_DIR/$WARP_APP_NAME.app/Contents/PlugIns"
-  cp -R "$DOCK_TILE_PLUGIN_DIR" "$BUNDLE_DIR/$WARP_APP_NAME.app/Contents/PlugIns/"
+  # LocalShell skips the dock tile plugin: its alternate icons are Warp's artwork.
+  if [[ $RELEASE_CHANNEL != "oss" ]]; then
+    # Note that the dock tile plugin is pre-built for both arm64 and x86_64 so we don't need to run lipo on it.
+    echo "Creating PlugIns directory and copying pre-built DockTilePlugin..."
+    mkdir -p "$BUNDLE_DIR/$WARP_APP_NAME.app/Contents/PlugIns"
+    cp -R "$DOCK_TILE_PLUGIN_DIR" "$BUNDLE_DIR/$WARP_APP_NAME.app/Contents/PlugIns/"
 
-  echo "Updating plist with dock tile plugin entries"
-  plutil -insert NSDockTilePlugIn -string "WarpDockTilePlugin.docktileplugin" "$BUNDLE_DIR"/$WARP_APP_NAME.app/Contents/Info.plist
-  plutil -insert MainAppBundleIdentifier -string "$BUNDLE_ID" "$BUNDLE_DIR"/$WARP_APP_NAME.app/Contents/PlugIns/WarpDockTilePlugin.docktileplugin/Contents/Info.plist
+    echo "Updating plist with dock tile plugin entries"
+    plutil -insert NSDockTilePlugIn -string "WarpDockTilePlugin.docktileplugin" "$BUNDLE_DIR"/$WARP_APP_NAME.app/Contents/Info.plist
+    plutil -insert MainAppBundleIdentifier -string "$BUNDLE_ID" "$BUNDLE_DIR"/$WARP_APP_NAME.app/Contents/PlugIns/WarpDockTilePlugin.docktileplugin/Contents/Info.plist
+  fi
 
   BUNDLED_RESOURCES_DIR="$BUNDLE_DIR/$WARP_APP_NAME.app/Contents/Resources"
   echo "Preparing bundled resources..."
@@ -722,7 +736,7 @@ if [[ "$ARTIFACT" == "app" ]]; then
   if [[ $RELEASE_CHANNEL = "stable" ]]; then
     CLI_SCRIPT_PATH="$BUNDLED_RESOURCES_DIR/bin/oz"
   elif [[ $RELEASE_CHANNEL = "oss" ]]; then
-    CLI_SCRIPT_PATH="$BUNDLED_RESOURCES_DIR/bin/warp-oss"
+    CLI_SCRIPT_PATH="$BUNDLED_RESOURCES_DIR/bin/localshell"
   else
     CLI_SCRIPT_PATH="$BUNDLED_RESOURCES_DIR/bin/oz-$RELEASE_CHANNEL"
   fi
@@ -747,7 +761,7 @@ EOF
     if [[ $RELEASE_CHANNEL = "stable" ]]; then
       WARPCTRL_COMMAND_NAME="warpctrl"
     elif [[ $RELEASE_CHANNEL = "oss" ]]; then
-      WARPCTRL_COMMAND_NAME="warpctrl-oss"
+      WARPCTRL_COMMAND_NAME="localshellctl"
     else
       WARPCTRL_COMMAND_NAME="warpctrl-$RELEASE_CHANNEL"
     fi
@@ -962,10 +976,10 @@ if [[ "$ARTIFACT" = app ]]; then
     local source_folder="$1"
 
     local args=(
-      --volname Warp
+      --volname "${WARP_DISPLAY_NAME:-Warp}"
       # For --no-internet-enable, see https://github.com/create-dmg/create-dmg/issues/179
       --no-internet-enable
-      --background app/assets/resources/mac/warp_install_image.png
+      --background "${DMG_BACKGROUND:-app/assets/resources/mac/warp_install_image.png}"
       --icon-size 128
       --window-size 700 500
       --format UDZO
@@ -990,9 +1004,9 @@ if [[ "$ARTIFACT" = app ]]; then
     create-dmg "${args[@]}"
   }
 
-  # If we're codesigning, stage the signed app and use that to create the DMG.
-  # Otherwise, create a DMG from the bundle dir directly.
-  if [[ $CODESIGN = true ]]; then
+  # If we're signing, stage the signed app and use that to create the DMG, so the DMG holds
+  # only the app. Otherwise, create a DMG from the bundle dir directly.
+  if [[ $CODESIGN = true || $SELFSIGN = true ]]; then
     if test -d "$DMG_DIR"; then
       echo "Clearing old dmg directory $DMG_DIR"
       rm -r "$DMG_DIR"
@@ -1003,11 +1017,13 @@ if [[ "$ARTIFACT" = app ]]; then
 
     create_warp_dmg "$DMG_DIR"
 
-    echo "Codesigning $DMG_DIR/$DMG_NAME..."
-    codesign_with_retry -f -s "$APPLE_TEAM_ID" --timestamp "$DMG_DIR/$DMG_NAME"
+    if [[ $CODESIGN = true ]]; then
+      echo "Codesigning $DMG_DIR/$DMG_NAME..."
+      codesign_with_retry -f -s "$APPLE_TEAM_ID" --timestamp "$DMG_DIR/$DMG_NAME"
 
-    NOTARIZATION_ARTIFACT="$DMG_DIR/$DMG_NAME"
-    STAPLE_TICKET=true
+      NOTARIZATION_ARTIFACT="$DMG_DIR/$DMG_NAME"
+      STAPLE_TICKET=true
+    fi
   else
     echo "Creating $DMG_DIR"
     mkdir -p "$DMG_DIR"

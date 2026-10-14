@@ -316,6 +316,7 @@ fn model_validation_reads_the_selected_team_catalog() {
         app.add_singleton_model(|ctx| {
             AIExecutionProfilesModel::new(&LaunchMode::new_for_unit_test(), ctx)
         });
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         app.add_singleton_model(LLMPreferences::new);
 
         app.read(|ctx| {
@@ -364,6 +365,7 @@ fn update_feature_model_choices_clears_unavailable_flag_after_failed_fetch() {
         app.add_singleton_model(|ctx| {
             AIExecutionProfilesModel::new(&LaunchMode::new_for_unit_test(), ctx)
         });
+        app.add_singleton_model(crate::ai::local_ai_runtime::LocalAiRuntime::new);
         let llm_preferences = app.add_singleton_model(LLMPreferences::new);
 
         // Simulate a failed authed fetch: the server was unhealthy, so the

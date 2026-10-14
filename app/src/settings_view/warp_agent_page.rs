@@ -2309,14 +2309,17 @@ impl WarpAgentPageView {
                     .git_operations_autogen_enabled_internal
                     .is_supported_on_current_platform())
         {
-            let active_ai_widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = vec![
+            let mut active_ai_widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = vec![
                 Box::new(NextCommandWidget::default()),
                 Box::new(PromptSuggestionsWidget::default()),
                 Box::new(SuggestedCodeBannersWidget::default()),
                 Box::new(NaturalLanguageAutosuggestionsWidget::default()),
-                Box::new(SharedBlockTitleGenerationWidget::new(ctx)),
-                Box::new(GitOperationsAutogenWidget::default()),
             ];
+            // Block titles are only generated for sharing, which LocalShell removes.
+            if !ChannelState::is_local_shell() {
+                active_ai_widgets.push(Box::new(SharedBlockTitleGenerationWidget::new(ctx)));
+            }
+            active_ai_widgets.push(Box::new(GitOperationsAutogenWidget::default()));
             let active_ai_toggle = SwitchStateHandle::default();
             categories.push(Category::with_header(
                 CategoryHeader::new("Active AI").with_trailing_element(
@@ -2340,6 +2343,7 @@ impl WarpAgentPageView {
         ));
 
         let voice_supported = cfg!(feature = "voice_input")
+            && !ChannelState::is_local_shell()
             && ai_settings
                 .voice_input_enabled_internal
                 .is_supported_on_current_platform();
@@ -2350,42 +2354,47 @@ impl WarpAgentPageView {
             ));
         }
 
-        categories.push(Category::new(
-            "Cloud Handoff",
-            vec![
-                Box::new(CloudHandoffWidget::default()),
-                Box::new(AutoHandoffOnSleepWidget::default()),
-                Box::new(AmpersandHandoffWidget::default()),
-            ],
-        ));
+        // LocalShell's AI comes only from the endpoint on the AI provider page; cloud handoff and
+        // provider credentials for Warp's servers don't apply.
+        if !ChannelState::is_local_shell() {
+            categories.push(Category::new(
+                "Cloud Handoff",
+                vec![
+                    Box::new(CloudHandoffWidget::default()),
+                    Box::new(AutoHandoffOnSleepWidget::default()),
+                    Box::new(AmpersandHandoffWidget::default()),
+                ],
+            ));
 
-        let page_view_handle = ctx.handle();
-        categories.push(Category::with_header(
-            CategoryHeader::new("Custom Inference").with_trailing_element(
-                move |view: &Self, _appearance, app| {
-                    let workspaces = UserWorkspaces::as_ref(app);
-                    let team_scope = workspaces.team_context(&page_view_handle, app);
-                    let shows_custom_inference =
-                        CustomInferenceVisibility::compute(&team_scope, app).show_custom_inference;
-                    if shows_custom_inference {
-                        view.custom_inference_add_button.as_ref(app).render(app)
-                    } else {
-                        Empty::new().finish()
-                    }
-                },
-            ),
-            vec![Box::new(ApiKeysWidget::new(ctx))],
-        ));
+            let page_view_handle = ctx.handle();
+            categories.push(Category::with_header(
+                CategoryHeader::new("Custom Inference").with_trailing_element(
+                    move |view: &Self, _appearance, app| {
+                        let workspaces = UserWorkspaces::as_ref(app);
+                        let team_scope = workspaces.team_context(&page_view_handle, app);
+                        let shows_custom_inference =
+                            CustomInferenceVisibility::compute(&team_scope, app)
+                                .show_custom_inference;
+                        if shows_custom_inference {
+                            view.custom_inference_add_button.as_ref(app).render(app)
+                        } else {
+                            Empty::new().finish()
+                        }
+                    },
+                ),
+                vec![Box::new(ApiKeysWidget::new(ctx))],
+            ));
 
-        categories.push(Category::new(
-            "AWS Bedrock",
-            vec![Box::new(AwsBedrockWidget::new(ctx))],
-        ));
+            categories.push(Category::new(
+                "AWS Bedrock",
+                vec![Box::new(AwsBedrockWidget::new(ctx))],
+            ));
 
-        categories.push(Category::new(
-            "Gemini Enterprise",
-            vec![Box::new(GeminiEnterpriseWidget::new(ctx))],
-        ));
+            categories.push(Category::new(
+                "Gemini Enterprise",
+                vec![Box::new(GeminiEnterpriseWidget::new(ctx))],
+            ));
+        }
 
         if FeatureFlag::CustomModelRouters.is_enabled() {
             #[allow(clippy::vec_init_then_push)]
@@ -2405,14 +2414,17 @@ impl WarpAgentPageView {
         ));
 
         #[cfg_attr(not(feature = "local_fs"), allow(unused_mut))]
-        let mut other_widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = vec![
-            Box::new(ShowOzUpdatesInZeroStateWidget::default()),
+        let mut other_widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = Vec::new();
+        if !ChannelState::is_local_shell() {
+            other_widgets.push(Box::new(ShowOzUpdatesInZeroStateWidget::default()));
+        }
+        other_widgets.extend::<[Box<dyn SettingsWidget<View = Self>>; 5]>([
             Box::new(UseAgentFooterWidget::default()),
             Box::new(AgentToolbarLayoutEditorWidget),
             Box::new(ShowConversationHistoryWidget::default()),
             Box::new(ThinkingDisplayModeWidget),
             Box::new(OrchestrationMessageDisplayModeWidget),
-        ];
+        ]);
         #[cfg(feature = "local_fs")]
         other_widgets.push(Box::new(ConversationLayoutPreferenceWidget));
         categories.push(Category::new("Other", other_widgets));
@@ -2428,16 +2440,18 @@ impl WarpAgentPageView {
         let global_ai_sign_up_button = MouseStateHandle::default();
         PageType::new_categorized(
             categories,
-            Some(PageTitle::new("Warp Agent").with_trailing_element(
-                move |_view, appearance, app| {
-                    render_global_ai_toggle(
-                        &global_ai_switch_state,
-                        &global_ai_sign_up_button,
-                        appearance,
-                        app,
-                    )
-                },
-            )),
+            Some(
+                PageTitle::new(ChannelState::agent_name()).with_trailing_element(
+                    move |_view, appearance, app| {
+                        render_global_ai_toggle(
+                            &global_ai_switch_state,
+                            &global_ai_sign_up_button,
+                            appearance,
+                            app,
+                        )
+                    },
+                ),
+            ),
         )
     }
 
@@ -3223,9 +3237,11 @@ fn render_global_ai_toggle(
     let is_ai_disabled_due_to_remote_session_org_policy =
         AISettings::as_ref(app).is_ai_disabled_due_to_remote_session_org_policy(app);
 
-    let is_anonymous = AuthStateProvider::as_ref(app)
-        .get()
-        .is_anonymous_or_logged_out();
+    // LocalShell has no accounts; AI is unlocked by configuring an endpoint instead.
+    let is_anonymous = !ChannelState::is_local_shell()
+        && AuthStateProvider::as_ref(app)
+            .get()
+            .is_anonymous_or_logged_out();
 
     let mut row = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
 

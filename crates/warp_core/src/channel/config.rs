@@ -63,6 +63,19 @@ impl WarpServerConfig {
             iap_config: None,
         }
     }
+
+    /// Configuration for builds that never talk to Warp's servers. The reserved `.invalid` TLD
+    /// (RFC 2606) never resolves, so any code path that still builds a server URL fails without
+    /// leaving the machine.
+    pub fn disabled() -> Self {
+        Self {
+            server_root_url: "https://warp-server.invalid".into(),
+            rtc_server_url: "wss://warp-server.invalid/graphql/v2".into(),
+            session_sharing_server_url: None,
+            firebase_auth_api_key: "".into(),
+            iap_config: None,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -80,6 +93,14 @@ impl OzConfig {
     pub fn production() -> Self {
         Self {
             oz_root_url: "https://oz.warp.dev".into(),
+            workload_audience_url: None,
+        }
+    }
+
+    /// See [`WarpServerConfig::disabled`].
+    pub fn disabled() -> Self {
+        Self {
+            oz_root_url: "https://oz.invalid".into(),
             workload_audience_url: None,
         }
     }
