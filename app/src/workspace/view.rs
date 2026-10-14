@@ -18417,6 +18417,7 @@ impl Workspace {
                             ctx.notify();
                         });
                     }
+                    GenerateWithAI => {}
                     TranslateUsingWarpAI => {
                         active_input_handle.update(ctx, |input, ctx| {
                             let content = format!("# {query}");
@@ -24086,7 +24087,8 @@ impl Workspace {
                 entry_focus: GlobalSearchEntryFocus::Results,
             });
         }
-        if *WarpDriveSettings::as_ref(ctx).enable_warp_drive {
+        // Warp Drive needs a Warp account, which LocalShell doesn't have.
+        if *WarpDriveSettings::as_ref(ctx).enable_warp_drive && !ChannelState::is_local_shell() {
             views.push(ToolPanelView::WarpDrive);
         }
         views

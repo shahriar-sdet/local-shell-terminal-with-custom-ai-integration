@@ -459,3 +459,54 @@ fn test_stale_async_results_do_not_poison_newer_query() {
         });
     });
 }
+
+#[test]
+fn test_has_running_sources_outlasts_the_initial_results_timeout() {
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+        let mixer = app.add_model(|_| SearchMixer::<TestAction>::new());
+        mixer.update(&mut app, |mixer, ctx| {
+            mixer.add_async_source(
+                DelayedAsyncSource {
+                    delay: Duration::from_millis(700),
+                    result: TestSearchItem {
+                        id: "slow".to_string(),
+                        priority_tier: 0,
+                        score: 0.0,
+                    },
+                },
+                [QueryFilter::Actions],
+                AddAsyncSourceOptions {
+                    debounce_interval: None,
+                    run_in_zero_state: false,
+                    run_when_unfiltered: false,
+                },
+                ctx,
+            );
+            mixer.run_query(
+                Query {
+                    text: "a".to_string(),
+                    filters: HashSet::from([QueryFilter::Actions]),
+                },
+                ctx,
+            );
+        });
+
+        // Once the initial results are shown (empty here), the mixer no longer counts as
+        // loading, but the slow source is still running.
+        Timer::after(Duration::from_millis(600)).await;
+        app.read(|app| {
+            let mixer = mixer.as_ref(app);
+            assert!(!mixer.is_loading());
+            assert!(mixer.are_results_empty());
+            assert!(mixer.has_running_sources());
+        });
+
+        Timer::after(Duration::from_millis(200)).await;
+        app.read(|app| {
+            let mixer = mixer.as_ref(app);
+            assert!(!mixer.has_running_sources());
+            assert!(!mixer.are_results_empty());
+        });
+    });
+}

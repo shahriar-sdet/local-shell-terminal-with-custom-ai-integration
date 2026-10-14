@@ -213,8 +213,9 @@ Step 2. AI features are now on.
 
 ### Try it
 
-- Type `#` at the start of the terminal input, then describe a command ("find files larger than
-  100 MB").
+- Type `#` at the start of the terminal input, describe a command ("find files larger than
+  100 MB") and press **Enter**. Nothing is sent to the model while you type; Enter asks it once,
+  and the suggested commands appear in the list. Pick one to put it in the input.
 - Press **⌘P** and run **New Agent Tab**, then ask the agent to do something in a project folder.
 
 ### Tune each task (optional)

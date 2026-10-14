@@ -47,7 +47,12 @@ pub(crate) async fn complete_json<T: DeserializeOwned>(
     user: String,
 ) -> Result<T, LocalAiError> {
     let text = complete(task, system, vec![ChatMessage::user(user)]).await?;
-    parse_json_answer(&text).ok_or_else(|| {
+    json_answer(&text)
+}
+
+/// Parses a model answer as JSON of type `T`, or reports what the model said instead.
+fn json_answer<T: DeserializeOwned>(text: &str) -> Result<T, LocalAiError> {
+    parse_json_answer(text).ok_or_else(|| {
         LocalAiError::Protocol(format!(
             "the model did not answer with the expected JSON: {}",
             text.chars().take(200).collect::<String>()
@@ -119,20 +124,41 @@ pub(crate) struct GeneratedParameter {
     pub description: String,
 }
 
+/// Example requests and answers sent ahead of the user's request. Small models follow worked
+/// examples far more reliably than instructions alone: without them, questions such as "what is
+/// the list command?" came back with no commands.
+const COMMAND_GENERATION_EXAMPLES: &[(&str, &str)] = &[
+    (
+        "what is the copy command?",
+        r#"{"commands":[{"command":"cp {{source}} {{destination}}","description":"Copy a file","parameters":[{"id":"source","description":"File to copy"},{"id":"destination","description":"Where to put the copy"}]},{"command":"cp -R {{source}} {{destination}}","description":"Copy a folder","parameters":[{"id":"source","description":"Folder to copy"},{"id":"destination","description":"Where to put the copy"}]}]}"#,
+    ),
+    ("write a poem about the sea", r#"{"commands":[]}"#),
+];
+
 pub(crate) async fn generate_commands(
     prompt: String,
     context: Option<WarpAiExecutionContext>,
 ) -> Result<GeneratedCommands, LocalAiError> {
     let system = format!(
-        "You turn a request into shell commands. {} Reply with JSON only, no prose: \
+        "You suggest shell commands. {} The user's text may be a task, a question about a command \
+         or a few keywords: in every case, suggest the commands that do what they mean or answer \
+         their question. Reply with JSON only, no prose: \
          {{\"commands\":[{{\"command\":\"...\",\"description\":\"...\",\"parameters\":\
          [{{\"id\":\"...\",\"description\":\"...\"}}]}}]}}. Give one to three alternatives, best \
          first. Write {{{{name}}}} placeholders for values the user must supply and describe each \
-         in parameters. The description is a short title. If the request is not something a \
-         shell command can do, answer {{\"commands\":[]}}.",
+         in parameters. The description is a short title. Answer {{\"commands\":[]}} only when no \
+         shell command could help at all.",
         environment_line(context.as_ref())
     );
-    complete_json(TaskKind::CommandGeneration, &system, prompt).await
+    let mut messages = COMMAND_GENERATION_EXAMPLES
+        .iter()
+        .flat_map(|(request, answer)| {
+            [ChatMessage::user(*request), ChatMessage::assistant(*answer)]
+        })
+        .collect::<Vec<_>>();
+    messages.push(ChatMessage::user(prompt));
+    let text = complete(TaskKind::CommandGeneration, &system, messages).await?;
+    json_answer(&text)
 }
 
 #[derive(Debug, Deserialize)]

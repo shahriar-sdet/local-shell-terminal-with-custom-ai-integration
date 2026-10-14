@@ -512,6 +512,7 @@ pub enum CommandSearchResultType {
     Workflow,
     OpenWarpAI,
     TranslateUsingWarpAI,
+    GenerateWithAI,
     EnvVarCollection,
     ViewInWarpDrive,
     AIQuery,
@@ -527,6 +528,7 @@ impl From<&CommandSearchItemAction> for CommandSearchResultType {
             AcceptEnvVarCollection(_) => Self::EnvVarCollection,
             OpenWarpAI => Self::OpenWarpAI,
             TranslateUsingWarpAI => Self::TranslateUsingWarpAI,
+            GenerateWithAI => Self::GenerateWithAI,
             AcceptAIQuery(_) | RunAIQuery(_) => Self::AIQuery,
         }
     }

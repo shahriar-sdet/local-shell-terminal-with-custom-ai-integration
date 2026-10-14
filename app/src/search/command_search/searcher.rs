@@ -62,6 +62,10 @@ pub enum CommandSearchItemAction {
 
     /// The user accepted the search item to translate the query to a command using Warp AI.
     TranslateUsingWarpAI,
+
+    /// The user asked the model to generate commands for the current query. Handled inside
+    /// command search, which stays open to show the generated commands.
+    GenerateWithAI,
 }
 
 #[cfg(test)]

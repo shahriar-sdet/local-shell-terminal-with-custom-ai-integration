@@ -268,6 +268,16 @@ impl<T: Action + Clone> SearchMixer<T> {
         self.loading_query_filters().is_some()
     }
 
+    /// Returns true while any data source is still running the current query. Unlike
+    /// [`Self::is_loading`], this stays true after the initial results are shown, until every
+    /// source has finished.
+    pub fn has_running_sources(&self) -> bool {
+        self.query.as_ref().is_some_and(|query| {
+            self.ordered_data_source_ids_for_query(query)
+                .any(|id| !self.finished_sources.contains(&id))
+        })
+    }
+
     /// Returns the first error found from running the data sources against the query, if any.
     pub fn first_data_source_error(
         &self,

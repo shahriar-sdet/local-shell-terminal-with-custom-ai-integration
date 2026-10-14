@@ -4,6 +4,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
+use parking_lot::Mutex;
 use serde_json::json;
 use warp_core::ui::builder;
 use warpui::elements::{ConstrainedBox, Container, Text};
@@ -32,6 +33,11 @@ use crate::workflows::{AIWorkflowOrigin, WorkflowSource, WorkflowType};
 const OPEN_WARP_AI_ITEM_BODY_TEXT: &str = "Ask LocalShell AI for command suggestions";
 const TRANSLATE_WITH_WARP_AI_ITEM_BODY_TEXT: &str =
     "Translate into shell command using LocalShell AI";
+const GENERATE_WITH_AI_ITEM_BODY_TEXT: &str = "Press Enter to generate commands with LocalShell AI";
+
+/// The query text the user asked the model to generate commands for. Shared between command
+/// search and its AI data source.
+pub type GenerationRequest = Arc<Mutex<Option<String>>>;
 
 #[derive(Clone, Debug)]
 pub enum WarpAISearchItem {
@@ -40,6 +46,9 @@ pub enum WarpAISearchItem {
 
     /// Opens WarpAI with the query.
     Open,
+
+    /// Generates commands for the query with the user's model.
+    Generate,
 }
 
 impl WarpAISearchItem {
@@ -47,6 +56,7 @@ impl WarpAISearchItem {
         match self {
             WarpAISearchItem::Translate => TRANSLATE_WITH_WARP_AI_ITEM_BODY_TEXT,
             WarpAISearchItem::Open => OPEN_WARP_AI_ITEM_BODY_TEXT,
+            WarpAISearchItem::Generate => GENERATE_WITH_AI_ITEM_BODY_TEXT,
         }
     }
 }
@@ -123,6 +133,7 @@ impl SearchItem for WarpAISearchItem {
         match self {
             WarpAISearchItem::Translate => CommandSearchItemAction::TranslateUsingWarpAI,
             WarpAISearchItem::Open => CommandSearchItemAction::OpenWarpAI,
+            WarpAISearchItem::Generate => CommandSearchItemAction::GenerateWithAI,
         }
     }
 
@@ -130,6 +141,7 @@ impl SearchItem for WarpAISearchItem {
         match self {
             WarpAISearchItem::Translate => CommandSearchItemAction::TranslateUsingWarpAI,
             WarpAISearchItem::Open => CommandSearchItemAction::OpenWarpAI,
+            WarpAISearchItem::Generate => CommandSearchItemAction::GenerateWithAI,
         }
     }
 
@@ -148,17 +160,30 @@ impl SearchItem for WarpAISearchItem {
 pub struct WarpAIDataSource {
     ai_client: Arc<dyn AIClient>,
     ai_execution_context: Option<WarpAiExecutionContext>,
+    /// When set, commands are generated only for the query the user explicitly asked for, instead
+    /// of on every keystroke. A model running on the user's machine takes seconds per answer, so
+    /// generating while they type floods it with requests that are cancelled a moment later.
+    generation_request: Option<GenerationRequest>,
 }
 
 impl WarpAIDataSource {
     pub fn new(
         ai_client: Arc<dyn AIClient>,
         ai_execution_context: Option<WarpAiExecutionContext>,
+        generation_request: Option<GenerationRequest>,
     ) -> Self {
         Self {
             ai_client,
             ai_execution_context,
+            generation_request,
         }
+    }
+
+    /// Whether commands may be generated for `query_text` now.
+    fn is_generation_requested(&self, query_text: &str) -> bool {
+        self.generation_request
+            .as_ref()
+            .is_none_or(|request| request.lock().as_deref() == Some(query_text))
     }
 }
 
@@ -172,9 +197,15 @@ impl SyncDataSource for WarpAIDataSource {
     ) -> Result<Vec<QueryResult<Self::Action>>, DataSourceRunErrorWrapper> {
         if query.filters.is_empty() {
             Ok(vec![WarpAISearchItem::Translate.into()])
-        } else {
+        } else if self.generation_request.is_none() {
             // Since the query matched, the `#` filter must be applied in this case.
             Ok(vec![WarpAISearchItem::Open.into()])
+        } else if self.is_generation_requested(&query.text) {
+            // The generated commands take this row's place; while they load, the list is empty so
+            // command search shows its loading state.
+            Ok(vec![])
+        } else {
+            Ok(vec![WarpAISearchItem::Generate.into()])
         }
     }
 }
@@ -192,8 +223,12 @@ impl AsyncDataSource for WarpAIDataSource {
         let query_text = query.text.clone();
         let ai_execution_context = self.ai_execution_context.clone();
         let ai_client = self.ai_client.clone();
+        let is_generation_requested = self.is_generation_requested(&query_text);
 
         Box::pin(async move {
+            if !is_generation_requested {
+                return Ok(Vec::new());
+            }
             let res = ai_client
                 .generate_commands_from_natural_language(query_text, ai_execution_context)
                 .await;
@@ -263,3 +298,7 @@ mod styles {
         appearance.monospace_font_size() + 2.
     }
 }
+
+#[cfg(test)]
+#[path = "warp_ai_tests.rs"]
+mod tests;

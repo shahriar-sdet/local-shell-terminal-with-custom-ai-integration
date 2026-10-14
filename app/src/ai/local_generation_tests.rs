@@ -47,3 +47,14 @@ fn code_fences_around_answers_are_removed() {
     );
     assert_eq!(strip_code_fence("  plain title "), "plain title");
 }
+
+#[test]
+fn command_generation_examples_are_valid_answers() {
+    for (request, answer) in COMMAND_GENERATION_EXAMPLES {
+        let parsed: GeneratedCommands = serde_json::from_str(answer)
+            .unwrap_or_else(|error| panic!("example answer for {request:?} isn't valid: {error}"));
+        for command in &parsed.commands {
+            assert!(!command.command.is_empty());
+        }
+    }
+}

@@ -25,6 +25,7 @@ use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent_conversations_model::AgentConversationsModel;
 use crate::appearance::Appearance;
 use crate::auth::AuthStateProvider;
+use crate::channel::ChannelState;
 use crate::code::buffer_location::LocalOrRemotePath;
 #[cfg(feature = "local_fs")]
 use crate::code::file_tree::FileTreeEvent;
@@ -110,9 +111,11 @@ impl ToolPanelView {
                 }
             }
             ToolPanelView::ConversationListView => {
-                if AuthStateProvider::as_ref(app)
-                    .get()
-                    .is_anonymous_or_logged_out()
+                // LocalShell keeps conversations on the Mac, so there's no account to require.
+                if !ChannelState::is_local_shell()
+                    && AuthStateProvider::as_ref(app)
+                        .get()
+                        .is_anonymous_or_logged_out()
                 {
                     ToolPanelAvailability::RequiresAccount
                 } else if AISettings::as_ref(app).is_conversation_history_available(app) {

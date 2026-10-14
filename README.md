@@ -32,8 +32,8 @@ security team can actually review: **the app talks to one host, and you choose t
 | Account and sign-in | Warp account (Firebase) | None. No account exists. |
 | Usage telemetry | Sent to an analytics service | None |
 | Crash reports | Sent to Sentry | None |
-| Settings, workflows, Warp Drive | Synced to Warp's cloud | Stay on disk (`~/.localshell/`) |
-| Session sharing, cloud agents, teams, billing | Warp's servers | Removed |
+| Settings and workflows | Synced to Warp's cloud | Stay on disk (`~/.localshell/`) |
+| Warp Drive, session sharing, cloud agents, teams, billing | Warp's servers | Removed |
 | Codebase indexing | Code processed by Warp's servers | Removed |
 | Voice input | Audio transcribed by Warp's servers | Removed |
 | Update checks | Warp's release server | None. You update by rebuilding. |
@@ -85,7 +85,8 @@ team makes. What it gives them is a short, checkable answer to "where does the a
 - **Agent Mode, powered by your model.** The agent reads and edits files, searches the code and
   runs commands, with the same approval and permission rules as Warp. File diffs, long-running
   commands and todo lists all work.
-- **AI Command Search:** type `#` at the start of the input and describe what you want.
+- **AI Command Search:** type `#` at the start of the input, describe what you want and press
+  Enter.
 - **Next-command and prompt suggestions** while you type.
 - **Generated commit messages, PR titles and PR descriptions** from the code review panel.
 - **Per-task model tuning.** Use a large model with a big context for the agent and a small, fast
@@ -150,7 +151,7 @@ legal advice.
 - macOS on Apple Silicon only.
 - How well the AI works depends on your model. Agent Mode needs a model trained for tool use;
   small models handle suggestions and command search well but struggle with long agent tasks.
-- Cloud-only Warp features are gone: Warp Drive sync, session sharing, cloud agents, MCP servers,
+- Cloud-only Warp features are gone: Warp Drive, session sharing, cloud agents, MCP servers,
   voice input and codebase indexing.
 
 ## How it's built

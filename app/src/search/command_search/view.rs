@@ -29,7 +29,7 @@ use warpui::{
 use super::ai_queries::AIQueriesDataSource;
 use super::env_var_collections::EnvVarCollectionDataSource;
 use super::history::history_data_source_for_session;
-use super::warp_ai::WarpAIDataSource;
+use super::warp_ai::{GenerationRequest, WarpAIDataSource};
 use super::workflows::{WorkflowsDataSource, cloud_workflows_data_source};
 use super::zero_state::{CommandSearchZeroStateEvent, CommandSearchZeroStateView};
 use crate::ai_assistant::GenerateCommandsFromNaturalLanguageError;
@@ -39,6 +39,7 @@ use crate::auth::auth_manager::AuthManager;
 use crate::auth::auth_state::AuthState;
 use crate::auth::auth_view_modal::AuthViewVariant;
 use crate::auth::{AuthStateProvider, UserUid};
+use crate::channel::ChannelState;
 use crate::completer::SessionContext;
 use crate::drive::settings::WarpDriveSettings;
 use crate::search::QueryFilter;
@@ -129,6 +130,7 @@ pub struct CommandSearchView {
     search_bar_state: ModelHandle<SearchBarState<CommandSearchItemAction>>,
     mixer: ModelHandle<CommandSearchMixer>,
     upgrade_link: MouseStateHandle,
+    ai_generation_request: GenerationRequest,
 }
 
 impl CommandSearchView {
@@ -141,6 +143,9 @@ impl CommandSearchView {
         });
 
         let mixer = ctx.add_model(|_| CommandSearchMixer::new());
+        // Late results from a slow source (such as the AI) end the "generating" state, which the
+        // search bar doesn't otherwise surface when no result arrives.
+        ctx.subscribe_to_model(&mixer, |_, _, _, ctx| ctx.notify());
 
         let search_bar = ctx.add_typed_action_view(|ctx| {
             SearchBar::new(
@@ -211,6 +216,7 @@ impl CommandSearchView {
             search_bar_state,
             mixer,
             upgrade_link: Default::default(),
+            ai_generation_request: Default::default(),
         }
     }
 
@@ -223,6 +229,9 @@ impl CommandSearchView {
         ctx: &mut ViewContext<Self>,
     ) {
         let window_id = ctx.window_id();
+        *self.ai_generation_request.lock() = None;
+        let generation_request =
+            ChannelState::is_local_shell().then(|| self.ai_generation_request.clone());
         self.mixer.update(ctx, |mixer, ctx| {
             mixer.reset(ctx);
 
@@ -231,11 +240,15 @@ impl CommandSearchView {
             // will show up higher in the list (i.e.: further away from the input).
             if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                 mixer.add_sync_source(
-                    WarpAIDataSource::new(self.ai_client.clone(), None),
+                    WarpAIDataSource::new(self.ai_client.clone(), None, generation_request.clone()),
                     HashSet::from([QueryFilter::NaturalLanguage]),
                 );
                 mixer.add_async_source(
-                    WarpAIDataSource::new(self.ai_client.clone(), ai_execution_context),
+                    WarpAIDataSource::new(
+                        self.ai_client.clone(),
+                        ai_execution_context,
+                        generation_request,
+                    ),
                     HashSet::from([QueryFilter::NaturalLanguage]),
                     AddAsyncSourceOptions {
                         debounce_interval: Some(Duration::from_millis(50)),
@@ -470,6 +483,11 @@ impl CommandSearchView {
         result_action: CommandSearchItemAction,
         ctx: &mut ViewContext<Self>,
     ) {
+        if matches!(result_action, CommandSearchItemAction::GenerateWithAI) {
+            self.generate_with_ai(ctx);
+            return;
+        }
+
         {
             use CommandSearchItemAction::*;
             let was_immediately_executed = match &result_action {
@@ -480,6 +498,7 @@ impl CommandSearchView {
                 | OpenWarpAI
                 | AcceptEnvVarCollection(_)
                 | TranslateUsingWarpAI
+                | GenerateWithAI
                 | AcceptAIQuery(_) => false,
             };
 
@@ -528,6 +547,26 @@ impl CommandSearchView {
         self.close(ctx);
     }
 
+    /// Whether the model is still generating commands the user asked for with the current query.
+    fn is_generating_with_ai(&self, app: &AppContext) -> bool {
+        let mixer = self.mixer.as_ref(app);
+        mixer.has_running_sources()
+            && mixer.current_query().is_some_and(|query| {
+                self.ai_generation_request.lock().as_deref() == Some(query.text.as_str())
+            })
+    }
+
+    /// Asks the model to generate commands for the current query, and runs the query again so the
+    /// results replace the prompt to generate.
+    fn generate_with_ai(&self, ctx: &mut ViewContext<Self>) {
+        let Some(query) = self.mixer.as_ref(ctx).current_query().cloned() else {
+            return;
+        };
+        *self.ai_generation_request.lock() = Some(query.text.clone());
+        self.mixer
+            .update(ctx, |mixer, ctx| mixer.run_query(query, ctx));
+    }
+
     /// Returns an `Option` containing the [`QueryResultRenderer`] that owns the currently selected
     /// result, if any.
     fn selected_result_renderer<'a>(
@@ -541,11 +580,11 @@ impl CommandSearchView {
         self.search_bar_state.as_ref(app).selected_result_renderer()
     }
 
-    fn render_loading_state(&self, appearance: &Appearance) -> Box<dyn Element> {
+    fn render_loading_state(&self, label: &str, appearance: &Appearance) -> Box<dyn Element> {
         let muted_color: ColorU = appearance.theme().nonactive_ui_text_color().into();
         let text = appearance
             .ui_builder()
-            .span("Loading...")
+            .span(label.to_owned())
             .with_style(UiComponentStyles {
                 font_size: Some(appearance.monospace_font_size()),
                 font_family_id: Some(appearance.ui_font_family()),
@@ -844,7 +883,7 @@ impl CommandSearchView {
                     )
                     .finish()
             }
-            _ => self.render_loading_state(appearance),
+            _ => self.render_loading_state("Loading...", appearance),
         }
     }
 
@@ -984,8 +1023,10 @@ impl View for CommandSearchView {
         let should_show_zero_state = self.search_bar.as_ref(app).should_show_zero_state(app);
         let panel_contents_body = if should_show_zero_state {
             ChildView::new(&self.zero_state_handle).finish()
+        } else if mixer.are_results_empty() && self.is_generating_with_ai(app) {
+            self.render_loading_state("Generating commands with LocalShell AI...", appearance)
         } else if mixer.is_loading() && mixer.are_results_empty() {
-            self.render_loading_state(appearance)
+            self.render_loading_state("Loading...", appearance)
         } else {
             self.render_results(appearance, app)
         };
